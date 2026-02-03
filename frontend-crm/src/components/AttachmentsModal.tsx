@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Upload, FileText, Trash2, Download } from 'lucide-react';
-import api from '../api';
+import { X, Upload, FileText, Trash2 } from 'lucide-react';import api from '../api';
 
 interface Attachment {
   id: string;
