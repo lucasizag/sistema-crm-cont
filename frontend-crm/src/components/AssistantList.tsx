@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Trash2, Search, X } from 'lucide-react';
 import api from '../api';
+import { Pencil, Trash2, Search } from 'lucide-react';
 import CreateAssistantModal from './CreateAssistantModal';
 
 export default function AssistantList() {

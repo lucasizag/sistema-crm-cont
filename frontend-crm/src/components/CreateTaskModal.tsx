@@ -6,6 +6,8 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  clientId?: string; 
+  taskToEdit?: any;
 }
 
 export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
