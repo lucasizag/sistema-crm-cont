@@ -20,10 +20,13 @@ import { AttachmentModule } from './attachment/attachment.module';
 
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: 'postgresql://neondb_owner:npg_Xj8xkWyT5gfh@ep-polished-dew-acp8cmqk-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+      // ¡OJO! Reemplaza esto con tu link real y tu contraseña real
+      url: 'postgresql://postgres.tevjgpnsortconzytfzu:ZDAAg7KyWVbXon9k@aws-0-us-west-2.pooler.supabase.com:5432/postgres',
       autoLoadEntities: true,
-      synchronize: true,
-      ssl: true,
+      synchronize: false,
+      ssl: {
+        rejectUnauthorized: false,
+      },
     }),
     ClientModule,
     TaskModule,

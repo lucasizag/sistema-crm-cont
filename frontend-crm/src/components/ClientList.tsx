@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, X, Pencil, Briefcase } from 'lucide-react';
+import { Search, X, Pencil, Briefcase, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import CreateClientModal from './CreateClientModal';
@@ -42,6 +42,20 @@ export default function ClientList() {
   const handleCreate = () => {
     setEditingClient(null);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const confirmDelete = window.confirm(`¿Estás seguro de que deseas eliminar al cliente "${name}"?\nEsta acción no se puede deshacer y eliminará todas sus tareas asociadas.`);
+    
+    if (confirmDelete) {
+      try {
+        await api.delete(`/client/${id}`);
+        fetchClients(); // Recargamos la lista para que desaparezca
+      } catch (error) {
+        console.error("Error eliminando cliente:", error);
+        alert("Hubo un error al eliminar el cliente. Revisa la consola.");
+      }
+    }
   };
 
   const filteredClients = clients.filter(client => {
@@ -157,6 +171,15 @@ export default function ClientList() {
                         >
                           <Briefcase className="w-4 h-4" />
                         </Link>
+
+                        {/* Botón Eliminar */}
+                        <button 
+                          onClick={() => handleDelete(client.id, client.name)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Eliminar cliente"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                         
                       </div>
                     </td>
