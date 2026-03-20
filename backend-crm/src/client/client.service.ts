@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -33,13 +33,21 @@ export class ClientService {
     });
   }
 
-  // CORREGIDO: id es string
-  update(id: string, updateClientDto: UpdateClientDto) {
-    return `Update logic here for #${id}`;
+  // --- LOGICA DE ACTUALIZAR ARREGLADA ---
+  async update(id: string, updateClientDto: UpdateClientDto) {
+    // 1. Actualizamos en la base de datos
+    await this.clientRepo.update(id, updateClientDto);
+    // 2. Devolvemos el cliente actualizado para que el Frontend lo vea
+    return this.clientRepo.findOne({ where: { id } });
   }
 
-  // CORREGIDO: id es string
-  remove(id: string) {
-    return `Delete logic here for #${id}`;
+  // --- LOGICA DE ELIMINAR ARREGLADA ---
+  async remove(id: string) {
+    const client = await this.clientRepo.findOne({ where: { id } });
+    if (!client) {
+      throw new NotFoundException(`El cliente con id ${id} no existe`);
+    }
+    await this.clientRepo.remove(client);
+    return { message: 'Cliente eliminado exitosamente' };
   }
 }

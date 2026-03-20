@@ -1,21 +1,30 @@
-import { Routes, Route } from 'react-router-dom'; // <--- Quitamos 'BrowserRouter as Router'
-import ClientList from './components/ClientList';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './components/Dashboard';
 import ClientDetails from './components/ClientDetails';
 import CalendarView from './components/CalendarView';
 
+// Importamos las 3 pantallas nuevas que acabamos de crear
+import Clientes from './components/Clientes';
+import Asistentes from './components/Asistentes';
+import Tareas from './components/Tareas';
+
 function App() {
   return (
-    // Ya no usamos <Router> aquí porque main.tsx ya lo tiene
-    <div className="min-h-screen bg-gray-100 text-gray-900 font-sans">
+    <Layout>
       <Routes>
-        <Route path="/" element={<ClientList />} />
+        {/* Rutas Ocultas (Detalles y Calendario) */}
         <Route path="/client/:id" element={<ClientDetails />} />
         <Route path="/calendar" element={<CalendarView />} />
+        
+        {/* Rutas del Menú Principal */}
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/clientes" element={<Clientes />} /> 
+        <Route path="/asistentes" element={<Asistentes />} />
+        <Route path="/tareas" element={<Tareas />} />
       </Routes>
-    </div>
+    </Layout>
   );
 }
 
 export default App;
-
-// Comentario para forzar deploy

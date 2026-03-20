@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Users, Briefcase, Search, X, Pencil } from 'lucide-react'; // <--- Agregamos Pencil
+import { Search, X, Pencil, Briefcase } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import CreateClientModal from './CreateClientModal';
-import Dashboard from './Dashboard';
 
 interface Client {
   id: string;
@@ -16,9 +15,8 @@ export default function ClientList() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // ESTADO NUEVO: Guarda el cliente que vamos a editar
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchClients();
@@ -26,22 +24,23 @@ export default function ClientList() {
 
   const fetchClients = async () => {
     try {
+      setIsLoading(true);
       const response = await api.get('/client');
       setClients(response.data);
     } catch (error) {
       console.error("Error cargando clientes:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Función para abrir el modal en modo EDICIÓN
   const handleEdit = (client: Client) => {
-    setEditingClient(client); // Guardamos el cliente a editar
-    setIsModalOpen(true);     // Abrimos el modal
+    setEditingClient(client);
+    setIsModalOpen(true);
   };
 
-  // Función para abrir el modal en modo CREACIÓN
   const handleCreate = () => {
-    setEditingClient(null);   // Nos aseguramos que esté vacío
+    setEditingClient(null);
     setIsModalOpen(true);
   };
 
@@ -53,33 +52,19 @@ export default function ClientList() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 px-4 mb-20">
+    <div className="w-full">
       
-      <Dashboard />
-
-      <div className="p-6 bg-white rounded-lg shadow-lg">
+      {/* Controles Superiores: Búsqueda y Botón */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-600" />
-            Clientes
-          </h2>
-          
-          <button 
-            onClick={handleCreate} // <--- Usamos la nueva función handleCreate
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition whitespace-nowrap"
-          >
-            + Nuevo Cliente
-          </button>
-        </div>
-
-        <div className="relative mb-6">
+        {/* Buscador */}
+        <div className="relative w-full sm:w-96">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+            <Search className="h-4 w-4 text-slate-400" />
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
+            className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
             placeholder="Buscar por nombre o CUIT..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -87,58 +72,93 @@ export default function ClientList() {
           {searchTerm && (
             <button 
               onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
+        {/* Botón Nuevo Cliente */}
+        <button 
+          onClick={handleCreate}
+          className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm hover:shadow-md flex justify-center items-center whitespace-nowrap"
+        >
+          + Nuevo Cliente
+        </button>
+      </div>
+
+      {/* Tabla de Clientes */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-100 text-gray-600 text-sm uppercase">
-                <th className="p-3 border-b">Nombre / Razón Social</th>
-                <th className="p-3 border-b">CUIT</th>
-                <th className="p-3 border-b">Condición Fiscal</th>
-                <th className="p-3 border-b text-center">Acciones</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                <th className="px-6 py-4 font-semibold">Nombre / Razón Social</th>
+                <th className="px-6 py-4 font-semibold">CUIT</th>
+                <th className="px-6 py-4 font-semibold">Condición Fiscal</th>
+                <th className="px-6 py-4 font-semibold text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredClients.length === 0 ? (
+            <tbody className="divide-y divide-slate-100">
+              
+              {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500">
-                    {searchTerm ? `No se encontraron resultados para "${searchTerm}"` : 'No hay clientes cargados.'}
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                    <div className="flex justify-center mb-2">
+                      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    </div>
+                    Cargando directorio...
+                  </td>
+                </tr>
+              ) : filteredClients.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                    <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Search className="w-8 h-8 text-slate-300" />
+                    </div>
+                    {searchTerm 
+                      ? <p>No encontramos ningún cliente que coincida con "<span className="font-semibold">{searchTerm}</span>".</p> 
+                      : <p>Aún no hay clientes registrados. ¡Haz clic en "+ Nuevo Cliente" para empezar!</p>
+                    }
                   </td>
                 </tr>
               ) : (
                 filteredClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50 transition border-b last:border-0">
-                    <td className="p-3 font-medium text-gray-800">{client.name || 'Sin Nombre'}</td>
-                    <td className="p-3 text-gray-600">{client.cuit || '-'}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">
+                  <tr key={client.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-800">{client.name || 'Sin Nombre'}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                      {client.cuit || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                         {client.taxType || 'N/A'}
                       </span>
                     </td>
-                    <td className="p-3 text-center flex items-center justify-center gap-2">
-                      {/* BOTON DE EDITAR (LAPIZ) */}
-                      <button 
-                        onClick={() => handleEdit(client)}
-                        className="text-gray-400 hover:text-green-600 transition"
-                        title="Editar datos del cliente"
-                      >
-                        <Pencil className="w-5 h-5" />
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        
+                        {/* Botón Editar */}
+                        <button 
+                          onClick={() => handleEdit(client)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          title="Editar datos del cliente"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
 
-                      {/* BOTON DE VER TAREAS (MALETIN) */}
-                      <Link 
-                        to={`/client/${client.id}`} 
-                        className="text-gray-400 hover:text-blue-600 transition"
-                        title="Ver Tareas y Vencimientos"
-                      >
-                        <Briefcase className="w-5 h-5" />
-                      </Link>
+                        {/* Botón Ver Detalles */}
+                        <Link 
+                          to={`/client/${client.id}`} 
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                          title="Ver Tareas y Documentos"
+                        >
+                          <Briefcase className="w-4 h-4" />
+                        </Link>
+                        
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -146,15 +166,15 @@ export default function ClientList() {
             </tbody>
           </table>
         </div>
-
-        {/* Le pasamos la propiedad clientToEdit al modal */}
-        <CreateClientModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={fetchClients} 
-          clientToEdit={editingClient} 
-        />
       </div>
+
+      <CreateClientModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={fetchClients} 
+        clientToEdit={editingClient} 
+      />
+      
     </div>
   );
 }
