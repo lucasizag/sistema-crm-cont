@@ -7,8 +7,14 @@ export class User {
   id: string;
 
   @Column()
-  name: string; // Nombre del ayudante (ej: "Juan Perez")
+  name: string;
 
-  @OneToMany(() => Task, (task) => task.assignedTo)
-  tasks: Task[];
+  @Column({ unique: true })
+  email: string;
+
+  @Column() // <-- Asegúrate de tener esto
+  password: string;
+
+  @Column({ default: 'assistant' }) // <-- Y esto
+  role: string;
 }
