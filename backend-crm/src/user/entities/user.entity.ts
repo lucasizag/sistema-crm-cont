@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Task } from '../../task/entities/task.entity';
+import { Task } from '../../task/entities/task.entity'; // <-- Agrega este import (revisa que la ruta sea correcta)
 
 @Entity()
 export class User {
@@ -9,12 +9,16 @@ export class User {
   @Column()
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true }) // nullable: true por si las dudas si antes no lo tenías
   email: string;
 
-  @Column() // <-- Asegúrate de tener esto
+  @Column({ nullable: true }) 
   password: string;
 
-  @Column({ default: 'assistant' }) // <-- Y esto
+  @Column({ default: 'assistant' })
   role: string;
+
+  // --- ESTO ES LO QUE FALTABA ---
+  @OneToMany(() => Task, (task) => task.assignedTo)
+  tasks: Task[];
 }
