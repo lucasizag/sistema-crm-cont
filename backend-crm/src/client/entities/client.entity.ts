@@ -22,4 +22,10 @@ export class Client {
   // --- AGREGAR ESTO ---
   @OneToMany(() => Note, (note) => note.client)
   notes: Note[];
+
+  @Column({ type: 'date', nullable: true })
+  startDate: Date | null; // Fecha de Alta
+
+  @Column({ type: 'date', nullable: true })
+  closeDate: Date | null; // Fecha de Cierre (Cese)
 }

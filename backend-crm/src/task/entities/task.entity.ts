@@ -20,6 +20,9 @@ export class Task {
   @Column({ type: 'date', nullable: true })
   dueDate: Date | null;
 
+  @Column({ default: 'Predeterminada' })
+  condition: string;
+
   @Column({ nullable: true })
   comment: string;
 

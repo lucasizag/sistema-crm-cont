@@ -14,4 +14,5 @@ export class CreateTaskDto {
   assignedTo?: any;
   clientId?: string;
   assignedToId?: string;
+  condition?: string;
 }

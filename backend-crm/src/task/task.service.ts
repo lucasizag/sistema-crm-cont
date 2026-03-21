@@ -19,6 +19,7 @@ export class TaskService {
       comment: createTaskDto.comment,
       estimatedHours: createTaskDto.estimatedHours || 0,
       actualHours: createTaskDto.actualHours || 0,
+      condition: createTaskDto.condition || 'Predeterminada',
     });
 
     // 2. Atrapamos el ID sin importar cómo lo haya mandado el Frontend
@@ -62,6 +63,7 @@ export class TaskService {
     if (updateTaskDto.status) task.status = updateTaskDto.status;
     if (updateTaskDto.dueDate) task.dueDate = new Date(updateTaskDto.dueDate);
     if (updateTaskDto.comment !== undefined) task.comment = updateTaskDto.comment;
+    if (updateTaskDto.condition) task.condition = updateTaskDto.condition;
     
     // Actualizamos horas
     if (updateTaskDto.estimatedHours !== undefined) task.estimatedHours = updateTaskDto.estimatedHours;

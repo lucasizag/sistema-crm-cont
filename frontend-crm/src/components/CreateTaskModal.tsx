@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Plus, Trash2, ListChecks } from 'lucide-react';
+import { X, Plus, Trash2, ListChecks, Repeat } from 'lucide-react';
 import api from '../api';
 
 interface Props {
@@ -10,15 +10,18 @@ interface Props {
   taskToEdit?: any;
 }
 
-export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
+export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: propClientId }: Props) {
   // Datos Generales
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   
-  // Renglones de Tareas
+  // --- ESTADO DE FRECUENCIA ---
+  const [recurrence, setRecurrence] = useState('none'); 
+  
+  // Renglones de Tareas (AGREGADO condition)
   const [taskRows, setTaskRows] = useState([
-    { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '' }
+    { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }
   ]);
 
   const [clients, setClients] = useState<any[]>([]);
@@ -29,11 +32,13 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     if (isOpen) {
       setGeneralTitle('');
       setDescription('');
-      setClientId('');
-      setTaskRows([{ id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '' }]);
+      setClientId(propClientId || ''); 
+      setRecurrence('none');
+      // AGREGADO condition AL ABRIR
+      setTaskRows([{ id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }]);
       fetchDropdownData();
     }
-  }, [isOpen]);
+  }, [isOpen, propClientId]); 
 
   const fetchDropdownData = async () => {
     try {
@@ -49,7 +54,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
   };
 
   const addRow = () => {
-    setTaskRows([...taskRows, { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '' }]);
+    // AGREGADO condition AL CREAR RENGLÓN
+    setTaskRows([...taskRows, { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }]);
   };
 
   const removeRow = (idToRemove: number) => {
@@ -69,19 +75,68 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     setLoading(true);
 
     try {
-      const promises = taskRows.map(row => {
-        const finalTitle = generalTitle ? `${generalTitle} - ${row.title}` : row.title;
+      const promises: any[] = [];
 
-        return api.post('/task', {
-          title: finalTitle,
-          description: description,
-          // EL TRUCO: Le pasamos un objeto con el ID para que TypeORM enganche la relación
-          client: clientId ? { id: clientId } : null,
-          assignedTo: row.assignedTo ? { id: row.assignedTo } : null,
-          dueDate: row.dueDate || null,
-          estimatedHours: row.estimatedHours ? parseFloat(row.estimatedHours) : 0
-        });
-      }); // <-- Este cierre de llave faltaba en tu código original
+      taskRows.forEach(row => {
+        const baseTitle = generalTitle ? `${generalTitle} - ${row.title}` : row.title;
+        const hours = row.estimatedHours ? parseFloat(row.estimatedHours) : 0;
+        
+        const baseDate = row.dueDate ? new Date(row.dueDate + 'T12:00:00') : new Date();
+
+        if (recurrence === 'none') {
+          // COMPORTAMIENTO NORMAL
+          promises.push(api.post('/task', {
+            title: baseTitle,
+            description: description,
+            clientId: clientId || null,
+            assignedToId: row.assignedTo || null,
+            dueDate: row.dueDate || null,
+            estimatedHours: hours,
+            condition: row.condition // AGREGADO
+          }));
+
+        } else if (recurrence === 'monthly') {
+          // COMPORTAMIENTO MENSUAL
+          for (let i = 0; i < 12; i++) {
+            const d = new Date(baseDate);
+            d.setMonth(baseDate.getMonth() + i);
+            
+            const monthName = d.toLocaleString('es-AR', { month: 'long' });
+            const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+            
+            const monthlyTitle = `${baseTitle} (${capitalizedMonth} ${d.getFullYear()})`;
+
+            promises.push(api.post('/task', {
+              title: monthlyTitle,
+              description: description,
+              clientId: clientId || null,
+              assignedToId: row.assignedTo || null,
+              dueDate: d.toISOString().split('T')[0], 
+              estimatedHours: hours,
+              condition: row.condition // AGREGADO
+            }));
+          }
+
+        } else if (recurrence === 'yearly') {
+          // COMPORTAMIENTO ANUAL
+          for (let i = 0; i < 5; i++) {
+            const d = new Date(baseDate);
+            d.setFullYear(baseDate.getFullYear() + i);
+
+            const yearlyTitle = `${baseTitle} (${d.getFullYear()})`;
+
+            promises.push(api.post('/task', {
+              title: yearlyTitle,
+              description: description,
+              clientId: clientId || null,
+              assignedToId: row.assignedTo || null,
+              dueDate: d.toISOString().split('T')[0],
+              estimatedHours: hours,
+              condition: row.condition // AGREGADO
+            }));
+          }
+        }
+      });
 
       await Promise.all(promises);
       
@@ -89,7 +144,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Hubo un error al guardar las tareas.');
+      alert('Hubo un error al guardar las tareas recurrentes.');
     } finally {
       setLoading(false);
     }
@@ -99,7 +154,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
         
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full">
           <X className="w-5 h-5" />
@@ -111,30 +166,50 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">Cargar Tareas / Trámite</h2>
-            <p className="text-sm text-slate-500">Agrupa varias acciones bajo un mismo trámite general.</p>
+            <p className="text-sm text-slate-500">Agrupa varias acciones o crea tareas recurrentes automáticamente.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Título General (Trámite)</label>
                 <input 
-                  type="text" required placeholder="Ej: Liquidación Mensual Mayo" 
+                  type="text" required placeholder="Ej: Liquidación IVA" 
                   className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
                   value={generalTitle} onChange={(e) => setGeneralTitle(e.target.value)}
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente Asociado</label>
                 <select 
-                  required className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
-                  value={clientId} onChange={(e) => setClientId(e.target.value)}
+                  required 
+                  disabled={!!propClientId} 
+                  className={`block w-full rounded-xl border p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors ${
+                    propClientId ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border-slate-200'
+                  }`}
+                  value={clientId} 
+                  onChange={(e) => setClientId(e.target.value)}
                 >
-                  <option value="">-- Seleccionar Cliente --</option>
+                  <option value="">-- Seleccionar --</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                  <Repeat className="w-3.5 h-3.5 text-indigo-500" /> Frecuencia
+                </label>
+                <select 
+                  className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm font-medium text-indigo-700"
+                  value={recurrence} onChange={(e) => setRecurrence(e.target.value)}
+                >
+                  <option value="none">Una sola vez</option>
+                  <option value="monthly">Todos los meses (Genera 1 año)</option>
+                  <option value="yearly">Todos los años (Genera 5 años)</option>
                 </select>
               </div>
             </div>
@@ -151,7 +226,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
           <div>
             <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-bold text-slate-800">Tareas Específicas</label>
+              <label className="block text-sm font-bold text-slate-800">Tareas Específicas a realizar</label>
               <button 
                 type="button" onClick={addRow}
                 className="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
@@ -169,13 +244,13 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                   </span>
                   
                   <input 
-                    type="text" required placeholder="Ej: Presentar DDJJ" title="Nombre de la tarea"
+                    type="text" required placeholder="Ej: Cargar comprobantes" title="Nombre de la tarea"
                     className="flex-1 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
                     value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)}
                   />
                   
                   <input 
-                    type="date" required title="Fecha límite"
+                    type="date" required title="Fecha límite base"
                     className="w-full sm:w-36 rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
                     value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
                   />
@@ -194,6 +269,16 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                     {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
 
+                  {/* SELECTOR DE CONDICIÓN AGREGADO */}
+                  <select 
+                    className="w-full sm:w-36 rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
+                    value={row.condition} 
+                    onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
+                  >
+                    <option value="Predeterminada">Predeterminada</option>
+                    <option value="Especial">Especial ⭐</option>
+                  </select>
+
                   <button 
                     type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1}
                     className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 transition"
@@ -210,7 +295,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
               Cancelar
             </button>
             <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 font-medium text-sm flex justify-center">
-              {loading ? 'Generando tareas...' : `Guardar ${taskRows.length} Tarea(s)`}
+              {loading 
+                ? 'Generando tareas...' 
+                : recurrence === 'monthly' ? `Crear ${taskRows.length * 12} Tareas Mensuales` 
+                : recurrence === 'yearly' ? `Crear ${taskRows.length * 5} Tareas Anuales` 
+                : `Guardar ${taskRows.length} Tarea(s)`}
             </button>
           </div>
 

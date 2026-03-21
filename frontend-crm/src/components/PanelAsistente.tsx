@@ -43,6 +43,14 @@ export default function PanelAsistente({ user }: { user: any }) {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-bold text-lg text-slate-900">{task.title}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg text-slate-900">{task.title}</h3>
+                  {task.condition === 'Especial' && (
+                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold border border-purple-200 shadow-sm">
+                      ESPECIAL ⭐
+                    </span>
+                  )}
+                </div>
                 <p className="text-slate-600 text-sm mb-2">{task.description}</p>
                 
                 {/* ETIQUETAS DE INFORMACIÓN */}
