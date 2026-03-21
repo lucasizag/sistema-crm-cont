@@ -10,21 +10,31 @@ export class TaskService {
   constructor(@InjectRepository(Task) private taskRepo: Repository<Task>) {}
 
   async create(createTaskDto: CreateTaskDto) {
+    // 1. Creamos la tarea solo con los textos y números
     const newTask = this.taskRepo.create({
       title: createTaskDto.title,
       description: createTaskDto.description, 
       dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : undefined,
       status: createTaskDto.status || 'PENDIENTE',
       comment: createTaskDto.comment,
-      
       estimatedHours: createTaskDto.estimatedHours || 0,
       actualHours: createTaskDto.actualHours || 0,
-
-      // TRUCO: Usamos 'as any' y 'undefined' para que TypeScript no chille
-      client: createTaskDto.clientId ? ({ id: createTaskDto.clientId } as any) : undefined,
-      assignedTo: createTaskDto.assignedToId ? ({ id: createTaskDto.assignedToId } as any) : undefined,
     });
+
+    // 2. Atrapamos el ID sin importar cómo lo haya mandado el Frontend
+    const clientId = createTaskDto.clientId || (createTaskDto.client?.id);
+    const assignedToId = createTaskDto.assignedToId || (createTaskDto.assignedTo?.id);
+
+    // 3. Inyectamos las relaciones de forma directa (esto nunca falla)
+    if (clientId) {
+      newTask.client = { id: clientId } as any;
+    }
     
+    if (assignedToId) {
+      newTask.assignedTo = { id: assignedToId } as any;
+    }
+
+    // 4. Guardamos en la base de datos
     return this.taskRepo.save(newTask);
   }
 
