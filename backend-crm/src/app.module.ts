@@ -23,7 +23,7 @@ import { AttachmentModule } from './attachment/attachment.module';
       // ¡OJO! Reemplaza esto con tu link real y tu contraseña real
       url: 'postgresql://postgres.tevjgpnsortconzytfzu:ZDAAg7KyWVbXon9k@aws-0-us-west-2.pooler.supabase.com:5432/postgres',
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       ssl: {
         rejectUnauthorized: false,
       },
