@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, X, Pencil, Briefcase, Trash2 } from 'lucide-react';
+import { Search, Pencil, Briefcase, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import CreateClientModal from './CreateClientModal';
