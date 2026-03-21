@@ -75,8 +75,9 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         return api.post('/task', {
           title: finalTitle,
           description: description,
-          clientId: clientId || null,
-          assignedToId: row.assignedTo || null,
+          // EL TRUCO: Le pasamos un objeto con el ID para que TypeORM enganche la relación
+          client: clientId ? { id: clientId } : null,
+          assignedTo: row.assignedTo ? { id: row.assignedTo } : null,
           dueDate: row.dueDate || null,
           estimatedHours: row.estimatedHours ? parseFloat(row.estimatedHours) : 0
         });
