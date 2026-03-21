@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { CheckCircle2, MessageSquare, Clock } from 'lucide-react';
+import { CheckCircle2, Clock } from 'lucide-react';
 
 export default function PanelAsistente({ user }: { user: any }) {
   const [tasks, setTasks] = useState([]);

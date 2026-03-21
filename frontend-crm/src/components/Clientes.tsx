@@ -15,7 +15,8 @@ export default function Clientes({ user }: { user: any }) {
       </div>
       
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <ClientList />
+        {/* PASAMOS EL USER AQUÍ PARA QUE DEJE DE DAR ERROR */}
+        <ClientList user={user} />
       </div>
     </div>
   );
