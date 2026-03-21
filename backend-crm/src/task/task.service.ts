@@ -12,18 +12,17 @@ export class TaskService {
   async create(createTaskDto: CreateTaskDto) {
     const newTask = this.taskRepo.create({
       title: createTaskDto.title,
-      description: createTaskDto.description, // Ahora sí existe en el DTO
-      dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : null,
-      status: 'PENDIENTE',
+      description: createTaskDto.description, 
+      dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : undefined,
+      status: createTaskDto.status || 'PENDIENTE',
+      comment: createTaskDto.comment,
       
-      // Mapeamos las horas
       estimatedHours: createTaskDto.estimatedHours || 0,
       actualHours: createTaskDto.actualHours || 0,
 
-      // Relaciones
-      client: { id: createTaskDto.clientId },
-      // Si viene userId, lo convertimos a objeto User. Si no, null.
-      assignedTo: createTaskDto.userId ? { id: createTaskDto.userId } : null,
+      // TRUCO: Usamos 'as any' y 'undefined' para que TypeScript no chille
+      client: createTaskDto.clientId ? ({ id: createTaskDto.clientId } as any) : undefined,
+      assignedTo: createTaskDto.assignedToId ? ({ id: createTaskDto.assignedToId } as any) : undefined,
     });
     
     return this.taskRepo.save(newTask);
@@ -52,14 +51,18 @@ export class TaskService {
     if (updateTaskDto.description !== undefined) task.description = updateTaskDto.description;
     if (updateTaskDto.status) task.status = updateTaskDto.status;
     if (updateTaskDto.dueDate) task.dueDate = new Date(updateTaskDto.dueDate);
+    if (updateTaskDto.comment !== undefined) task.comment = updateTaskDto.comment;
     
     // Actualizamos horas
     if (updateTaskDto.estimatedHours !== undefined) task.estimatedHours = updateTaskDto.estimatedHours;
     if (updateTaskDto.actualHours !== undefined) task.actualHours = updateTaskDto.actualHours;
 
-    // Actualizamos responsable (userId -> assignedTo)
-    if (updateTaskDto.userId) {
-      task.assignedTo = { id: updateTaskDto.userId } as any;
+    // Actualizamos responsable y cliente
+    if (updateTaskDto.assignedToId) {
+      task.assignedTo = { id: updateTaskDto.assignedToId } as any;
+    }
+    if (updateTaskDto.clientId) {
+      task.client = { id: updateTaskDto.clientId } as any;
     }
 
     return this.taskRepo.save(task);
