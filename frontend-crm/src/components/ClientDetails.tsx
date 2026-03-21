@@ -6,33 +6,25 @@ import {
   Trash2, 
   CheckSquare, 
   Square, 
-  User as UserIcon, 
   Pencil, 
-  MessageSquare, 
-  Send, 
-  Paperclip,
   AlertTriangle 
 } from 'lucide-react';
 import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
-import AttachmentsModal from './AttachmentsModal';
+import EditTaskModal from './EditTaskModal'; 
 
-// --- 1. DEFINICIONES DE TIPOS (INTERFACES) ---
+// --- 1. DEFINICIONES DE TIPOS ---
 interface Task {
   id: string;
   title: string;
   description?: string;
   dueDate: string;
   status: string;
+  condition?: string;
   assignedTo?: { id: string; name: string };
+  client?: { id: string; name: string };
   estimatedHours: number;
   actualHours: number;
-}
-
-interface Note {
-  id: string;
-  content: string;
-  createdAt: string;
 }
 
 interface Client {
@@ -46,32 +38,21 @@ interface Client {
 export default function ClientDetails() {
   const { id } = useParams();
   
-  // Estados de datos
   const [client, setClient] = useState<Client | null>(null);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [newNote, setNewNote] = useState("");
   const [error, setError] = useState("");
 
-  // Estados de Modals
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
-  const [attachTask, setAttachTask] = useState<{id: string, title: string} | null>(null);
 
-  // --- 2. CARGA DE DATOS ---
   const fetchClientData = useCallback(async () => {
     if (!id) return;
     try {
       setError(""); 
       const clientRes = await api.get(`/client/${id}`);
       setClient(clientRes.data);
-
-      const notesRes = await api.get(`/note/client/${id}`);
-      setNotes(notesRes.data);
-
     } catch (err: any) {
       console.error("ERROR CRÍTICO:", err);
-      setError(err.response?.data?.message || err.message || "Error desconocido al conectar con el servidor.");
+      setError(err.response?.data?.message || err.message || "Error desconocido al servidor.");
     }
   }, [id]);
 
@@ -79,35 +60,14 @@ export default function ClientDetails() {
     fetchClientData();
   }, [fetchClientData]);
 
-  // --- 3. FUNCIONES DE LÓGICA ---
-
-  const handleAddNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNote.trim() || !id) return;
-    try {
-      await api.post('/note', { content: newNote, clientId: id });
-      setNewNote("");
-      const res = await api.get(`/note/client/${id}`);
-      setNotes(res.data);
-    } catch (error) {
-      console.error(error);
-      alert("No se pudo guardar la nota");
-    }
-  };
-
   const handleCreateTask = () => {
-    setEditingTask(null); 
-    setIsModalOpen(true);
+    setIsCreateModalOpen(true);
   };
 
+  // ESTA ES LA MAGIA DEL BOTÓN EDITAR QUE YA FUNCIONA
   const handleEditTask = (task: Task) => {
-    setEditingTask(task); 
-    setIsModalOpen(true);
-  };
-
-  const handleOpenAttachments = (task: Task) => {
-    setAttachTask({ id: task.id, title: task.title });
-    setIsAttachModalOpen(true);
+    const taskWithClient = { ...task, client: { id: client?.id, name: client?.name } };
+    setEditingTask(taskWithClient as any); 
   };
 
   const toggleTaskStatus = async (task: Task) => {
@@ -127,191 +87,176 @@ export default function ClientDetails() {
   };
 
   const getDeadlineStyle = (dueDate: string, status: string) => {
-    if (status === 'COMPLETADA') return { color: 'bg-gray-100 text-gray-500 border-gray-200', text: 'Completada' };
-    if (!dueDate) return { color: 'bg-gray-50 text-gray-600', text: 'Sin fecha' };
+    if (status === 'COMPLETADA') return { color: 'bg-slate-100 text-slate-500 border-slate-200', text: 'Completada' };
+    if (!dueDate) return { color: 'bg-slate-50 text-slate-600', text: 'Sin fecha' };
     
     const diffDays = Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (86400000));
     
     if (diffDays < 0) return { color: 'bg-red-100 text-red-700 border-red-200 font-bold', text: 'VENCIDA' };
     if (diffDays <= 3) return { color: 'bg-orange-100 text-orange-700 border-orange-200 font-bold', text: 'Urgente' };
-    return { color: 'bg-green-100 text-green-700 border-green-200', text: 'A tiempo' };
+    return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'A tiempo' };
   };
-
-  // --- 4. RENDERIZADO (VISTAS) ---
 
   if (error) return (
     <div className="p-10 text-center flex flex-col items-center justify-center h-[50vh]">
       <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
-      <h2 className="text-2xl font-bold text-gray-800">Ups, algo salió mal</h2>
+      <h2 className="text-2xl font-bold text-slate-800">Ups, algo salió mal</h2>
       <p className="text-red-600 mt-2 bg-red-50 p-4 rounded border border-red-200">{error}</p>
-      <Link to="/" className="mt-6 text-blue-600 hover:underline">Volver al inicio</Link>
+      <Link to="/" className="mt-6 text-indigo-600 hover:underline">Volver al inicio</Link>
     </div>
   );
 
-  if (!client) return <div className="p-10 text-center text-gray-500">Cargando datos del cliente...</div>;
+  if (!client) return <div className="p-10 text-center text-slate-500">Cargando datos del cliente...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto mt-10 p-6 mb-20">
-      <Link to="/" className="flex items-center text-gray-500 hover:text-blue-600 mb-6 w-fit">
+    <div className="max-w-6xl mx-auto mt-10 p-6 mb-20 animate-fade-in">
+      <Link to="/" className="flex items-center text-slate-500 hover:text-indigo-600 mb-6 w-fit transition-colors">
         <ArrowLeft className="w-5 h-5 mr-1" /> Volver al listado
       </Link>
 
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-l-4 border-blue-600">
-        <h1 className="text-3xl font-bold text-gray-800">{client.name}</h1>
-        <div className="flex gap-6 mt-2 text-gray-600">
-          <p>🆔 CUIT: {client.cuit}</p>
-          <p>⚖️ {client.taxType}</p>
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 border-l-4 border-l-indigo-600">
+        <h1 className="text-3xl font-bold text-slate-800">{client.name}</h1>
+        <div className="flex gap-6 mt-2 text-slate-600 font-medium">
+          <p>🆔 CUIT: {client.cuit || 'No especificado'}</p>
+          <p>⚖️ {client.taxType || 'Sin condición'}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* COLUMNA TAREAS (2/3 del ancho) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" /> Control de Tareas
-            </h2>
-            <button onClick={handleCreateTask} className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">+ Nueva Tarea</button>
-          </div>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-600" /> Control de Tareas
+          </h2>
+          <button 
+            onClick={handleCreateTask} 
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm"
+          >
+            + Nueva Tarea
+          </button>
+        </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            {client.tasks && client.tasks.length > 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {client.tasks && client.tasks.length > 0 ? (
+            <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+                <thead className="bg-slate-50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
                   <tr>
-                    <th className="p-3">Estado</th>
-                    <th className="p-3">Tarea</th>
-                    <th className="p-3 text-center">Horas (Est / Real)</th>
-                    <th className="p-3">Resp.</th>
-                    <th className="p-3">Fecha</th>
-                    <th className="p-3 text-right">Acciones</th>
+                    <th className="p-4 w-16 text-center">Estado</th>
+                    <th className="p-4">Tarea y Descripción</th>
+                    <th className="p-4 text-center">Horas (Est/Real)</th>
+                    <th className="p-4 text-center">Responsable</th>
+                    <th className="p-4">Vencimiento</th>
+                    <th className="p-4 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-slate-100">
                   {client.tasks.map(task => {
                     const urgency = getDeadlineStyle(task.dueDate, task.status);
-                    
-                    // --- CÁLCULO DE DIFERENCIA DE HORAS ---
                     const diff = task.actualHours - task.estimatedHours;
-                    const hoursColor = diff > 0 ? 'text-red-600 font-bold' : 'text-green-600 font-medium';
+                    const hoursColor = diff > 0 ? 'text-red-600 font-bold' : 'text-emerald-600 font-medium';
 
                     return (
-                      <tr key={task.id} className="hover:bg-gray-50 transition">
-                        {/* 1. CHECKBOX */}
-                        <td className="p-3">
-                          <button onClick={() => toggleTaskStatus(task)} className={task.status === 'COMPLETADA' ? 'text-green-600' : 'text-gray-300 hover:text-blue-500'}>
-                            {task.status === 'COMPLETADA' ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                          </button>
-                        </td>
-
-                        {/* 2. TITULO Y ESTADO */}
-                        <td className="p-3">
-                          <p className={`font-medium text-sm ${task.status === 'COMPLETADA' ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</p>
-                          {task.status !== 'COMPLETADA' && <span className={`text-[10px] px-1.5 rounded border mt-1 inline-block ${urgency.color}`}>{urgency.text}</span>}
-                        </td>
-
-                        {/* 3. COLUMNA DE HORAS (NUEVA) */}
-                        <td className="p-3 text-center">
-                           <div className="flex flex-col items-center text-xs">
-                             <span className="text-gray-500">
-                               Est: <b>{task.estimatedHours}h</b>
-                             </span>
-                             <span className="text-gray-800">
-                               Real: <b>{task.actualHours}h</b>
-                             </span>
-                             
-                             {(task.estimatedHours > 0 || task.actualHours > 0) && (
-                                <span className={`mt-1 px-2 py-0.5 rounded bg-gray-100 ${hoursColor}`}>
-                                  {diff > 0 ? `+${diff}h` : `${diff}h`}
-                                </span>
-                             )}
-                           </div>
-                        </td>
-
-                        {/* 4. RESPONSABLE */}
-                        <td className="p-3">
-                          {task.assignedTo ? <div className="bg-indigo-100 p-1 rounded-full text-indigo-600 inline-block" title={task.assignedTo.name}><UserIcon className="w-3 h-3" /></div> : <span className="text-gray-300">-</span>}
-                        </td>
-
-                        {/* 5. FECHA */}
-                        <td className="p-3 text-sm text-gray-600">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
+                      <tr key={task.id} className="hover:bg-slate-50 transition">
                         
-                        {/* 6. BOTONES DE ACCION */}
-                        <td className="p-3 text-right flex justify-end gap-1">
-                          <button onClick={() => handleOpenAttachments(task)} className="text-gray-400 hover:text-indigo-600 p-1" title="Adjuntos">
-                            <Paperclip className="w-4 h-4" />
+                        <td className="p-4 text-center align-top pt-5">
+                          <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${task.status === 'COMPLETADA' ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
+                            {task.status === 'COMPLETADA' ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
                           </button>
-                          <button onClick={() => handleEditTask(task)} className="text-gray-400 hover:text-blue-600 p-1" title="Editar">
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => deleteTask(task.id)} className="text-gray-400 hover:text-red-600 p-1" title="Eliminar">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        </td>
+
+                        <td className="p-4 align-top">
+                          <div className="flex items-center gap-2">
+                            <p className={`font-bold text-sm ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                              {task.title}
+                            </p>
+                            {task.condition === 'Especial' && (
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
+                                ESPECIAL ⭐
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* ACÁ ESTÁ LA DESCRIPCIÓN AGREGADA */}
+                          {task.description && (
+                            <p className={`text-xs mt-1.5 whitespace-pre-line ${task.status === 'COMPLETADA' ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {task.description}
+                            </p>
+                          )}
+                          
+                          {task.status !== 'COMPLETADA' && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
+                        </td>
+
+                        <td className="p-4 text-center align-top">
+                          <div className="flex flex-col items-center text-xs">
+                            <span className="text-slate-500">
+                              Est: <b className="text-slate-700">{task.estimatedHours}h</b>
+                            </span>
+                            <span className="text-slate-800 mt-0.5">
+                              Real: <b>{task.actualHours}h</b>
+                            </span>
+                            {(task.estimatedHours > 0 || task.actualHours > 0) && (
+                              <span className={`mt-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 ${hoursColor}`}>
+                                {diff > 0 ? `+${diff}h` : `${diff}h`}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="p-4 text-center align-top pt-5">
+                          {/* ACÁ QUITAMOS EL ICONO, SOLO SE MUESTRA EL NOMBRE LIMPIO */}
+                          {task.assignedTo ? (
+                            <span className="text-slate-700 text-sm font-semibold">
+                              {task.assignedTo.name}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs font-medium bg-slate-50 px-3 py-1 rounded-full border border-slate-200">Sin asignar</span>
+                          )}
+                        </td>
+
+                        <td className="p-4 text-sm font-medium text-slate-600 align-top pt-5">
+                          {task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-AR') : '-'}
+                        </td>
+                        
+                        <td className="p-4 text-right align-top pt-4">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => handleEditTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteTask(task.id)} className="text-slate-400 hover:text-red-600 bg-white hover:bg-red-50 p-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all shadow-sm" title="Eliminar">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            ) : (
-              <div className="p-8 text-center text-gray-500">No hay tareas pendientes.</div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="p-12 text-center">
+              <CheckSquare className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">No hay tareas creadas para este cliente.</p>
+            </div>
+          )}
         </div>
-
-        {/* COLUMNA BITACORA (1/3 del ancho) */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-fit">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-            <MessageSquare className="w-5 h-5 text-purple-600" /> Bitácora
-          </h2>
-          
-          <div className="space-y-3 max-h-[400px] overflow-y-auto mb-4 pr-1">
-            {notes.length === 0 ? (
-              <p className="text-sm text-gray-400 italic text-center py-4">Sin notas registradas.</p>
-            ) : (
-              notes.map(note => (
-                <div key={note.id} className="bg-white p-3 rounded shadow-sm border border-gray-100 text-sm">
-                  <p className="text-gray-800 whitespace-pre-line">{note.content}</p>
-                  <p className="text-xs text-gray-400 mt-2 text-right">
-                    {new Date(note.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-
-          <form onSubmit={handleAddNote} className="relative">
-            <textarea 
-              className="w-full rounded-md border-gray-300 shadow-sm border p-2 text-sm focus:ring-purple-500 focus:border-purple-500 pr-10"
-              rows={3}
-              placeholder="Escribe una nota..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(e); }}}
-            />
-            <button type="submit" className="absolute bottom-2 right-2 text-purple-600 hover:text-purple-800 bg-white p-1 rounded-full shadow-sm">
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
-
       </div>
 
-      {/* MODALES */}
       <CreateTaskModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         onSuccess={fetchClientData} 
         clientId={client.id}
-        taskToEdit={editingTask} 
       />
 
-      <AttachmentsModal
-        isOpen={isAttachModalOpen}
-        onClose={() => setIsAttachModalOpen(false)}
-        taskId={attachTask?.id || null}
-        taskTitle={attachTask?.title || ''}
+      <EditTaskModal 
+        isOpen={!!editingTask} 
+        onClose={() => setEditingTask(null)} 
+        onSuccess={() => {
+          setEditingTask(null);
+          fetchClientData();
+        }} 
+        task={editingTask}
       />
     </div>
   );
