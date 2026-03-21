@@ -1,13 +1,17 @@
 export class CreateTaskDto {
   title: string;
   description?: string;
-  dueDate?: string;
-  clientId: string;
-  userId?: string;
+  status?: string;
   
-  // --- AGREGAR ESTO ---
-  status?: string; // <--- Faltaba esto para poder cambiar de PENDIENTE a COMPLETADA
-
+  // --- LOS CAMPOS NUEVOS QUE AGREGAMOS ---
+  dueDate?: Date | string;
   estimatedHours?: number;
   actualHours?: number;
+  comment?: string;
+
+  // --- LAS RELACIONES ---
+  client?: any;
+  assignedTo?: any;
+  clientId?: string;
+  assignedToId?: string;
 }
