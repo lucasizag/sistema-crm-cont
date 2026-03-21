@@ -96,7 +96,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 font-sans pt-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-fade-in">
         
         {/* --- CABECERA --- */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -113,33 +113,33 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* --- SECCIÓN 1: TARJETAS DE RESUMEN (KPIs) --- */}
+        {/* --- SECCIÓN 1: TARJETAS DE RESUMEN (AHORA SON ENLACES CLICKEABLES) --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           
-          {/* Tarjeta Clientes */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5 hover:shadow-md transition">
-            <div className="bg-blue-50 p-4 rounded-xl text-blue-600 border border-blue-100">
+          {/* Tarjeta Clientes -> Enlace a /client */}
+          <Link to="/client" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5 hover:shadow-md hover:border-blue-300 transition group cursor-pointer">
+            <div className="bg-blue-50 p-4 rounded-xl text-blue-600 border border-blue-100 group-hover:bg-blue-100 transition">
               <Users className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Total Clientes</p>
-              <h3 className="text-3xl font-bold text-slate-800">{stats.totalClients}</h3>
+              <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider group-hover:text-blue-500 transition">Total Clientes</p>
+              <h3 className="text-3xl font-bold text-slate-800 group-hover:text-blue-600 transition">{stats.totalClients}</h3>
             </div>
-          </div>
+          </Link>
 
-          {/* Tarjeta Pendientes */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5 hover:shadow-md transition">
-            <div className="bg-amber-50 p-4 rounded-xl text-amber-600 border border-amber-100">
+          {/* Tarjeta Pendientes -> Enlace a /task */}
+          <Link to="/task" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5 hover:shadow-md hover:border-amber-300 transition group cursor-pointer">
+            <div className="bg-amber-50 p-4 rounded-xl text-amber-600 border border-amber-100 group-hover:bg-amber-100 transition">
               <ClipboardList className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Tareas Pendientes</p>
-              <h3 className="text-3xl font-bold text-slate-800">{stats.totalPending}</h3>
+              <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider group-hover:text-amber-600 transition">Tareas Pendientes</p>
+              <h3 className="text-3xl font-bold text-slate-800 group-hover:text-amber-600 transition">{stats.totalPending}</h3>
             </div>
-          </div>
+          </Link>
 
-          {/* Tarjeta Urgencias */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition relative overflow-hidden group">
+          {/* Tarjeta Urgencias -> Baja a la Agenda Prioritaria */}
+          <a href="#agenda-prioritaria" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition relative overflow-hidden group cursor-pointer hover:border-red-300">
             {stats.totalUrgent > 0 && (
               <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
             )}
@@ -148,28 +148,30 @@ export default function Dashboard() {
                 <AlertTriangle className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Atención Requerida</p>
+                <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider group-hover:text-red-500 transition">Atención Requerida</p>
                 <div className="flex items-end gap-2">
                   <h3 className="text-3xl font-bold text-red-600 leading-none">{stats.totalUrgent}</h3>
                   <p className="text-xs text-red-400 font-medium mb-1">Vencen pronto</p>
                 </div>
               </div>
             </div>
-          </div>
+          </a>
         </div>
 
         {/* --- SECCIÓN 2: AGENDA PRIORITARIA --- */}
-        <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden relative">
+        <div id="agenda-prioritaria" className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden relative">
           
           {/* Decoración de fondo */}
           <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
           
           <div className="p-6 sm:p-8 relative z-10">
+            
+            {/* TÍTULO LIMPIADO */}
             <h2 className="text-xl font-bold flex items-center gap-3 mb-6 text-white">
               <div className="bg-slate-800 p-2 rounded-lg text-amber-400 border border-slate-700">
                 <Clock className="w-5 h-5" />
               </div>
-              Agenda Prioritaria: Lo que hay que hacer YA
+              Agenda Prioritaria
             </h2>
 
             {tasks.length > 0 ? (
