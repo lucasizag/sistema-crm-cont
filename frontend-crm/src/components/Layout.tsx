@@ -1,22 +1,28 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCircle, CheckSquare, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, CheckSquare, Briefcase, LogOut } from 'lucide-react';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+interface LayoutProps {
+  children: React.ReactNode;
+  user: any;
+  onLogout: () => void;
+}
+
+export default function Layout({ children, user, onLogout }: LayoutProps) {
   const location = useLocation();
 
-  // Aquí definimos las opciones del menú
   const menuItems = [
     { path: '/', name: 'Panel', icon: LayoutDashboard },
     { path: '/clientes', name: 'Clientes', icon: Users },
-    { path: '/asistentes', name: 'Asistentes', icon: UserCircle },
+    // Solo mostramos asistentes en el menú si es admin
+    ...(user.role === 'admin' ? [{ path: '/asistentes', name: 'Asistentes', icon: UserCircle }] : []),
     { path: '/tareas', name: 'Tareas', icon: CheckSquare },
   ];
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       
-      {/* --- SIDEBAR ESCRITORIO (Oculto en celular) --- */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-slate-300 border-r border-slate-800 transition-all z-20">
+      {/* SIDEBAR ESCRITORIO */}
+      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-slate-300 border-r border-slate-800 z-20">
         <div className="p-6 flex items-center gap-3 text-white">
           <div className="bg-indigo-600 p-2 rounded-lg shadow-md">
             <Briefcase className="w-5 h-5" />
@@ -26,7 +32,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
-            // Comprobamos si estamos en la ruta actual para pintarlo de otro color
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <Link
@@ -45,26 +50,34 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Perfil del usuario abajo */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-4 py-2 hover:bg-slate-800 rounded-xl transition cursor-pointer">
-            <div className="w-9 h-9 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
-              K
+        {/* Perfil del usuario y Botón Salir */}
+        <div className="p-4 border-t border-slate-800 space-y-2">
+          <div className="flex items-center gap-3 px-4 py-2">
+            <div className="w-9 h-9 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold uppercase">
+              {user.name?.charAt(0) || 'U'}
             </div>
-            <div>
-              <p className="text-sm font-medium text-white">Karina</p>
-              <p className="text-xs text-slate-500">Administradora</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user.name}</p>
+              <p className="text-xs text-slate-500 capitalize">{user.role}</p>
             </div>
           </div>
+          
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-3 w-full px-4 py-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-xl transition-all text-sm font-medium"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar Sesión
+          </button>
         </div>
       </aside>
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
+      {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto pb-20 md:pb-0 h-full">
         {children}
       </main>
 
-      {/* --- NAVBAR MÓVIL (Fija abajo solo en celular) --- */}
+      {/* NAVBAR MÓVIL */}
       <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around items-center p-2 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -81,6 +94,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+        {/* Botón salir móvil */}
+        <button 
+          onClick={onLogout}
+          className="flex flex-col items-center p-2 text-slate-500 min-w-[64px]"
+        >
+          <LogOut className="w-6 h-6 mb-1" />
+          <span className="text-[10px] font-medium">Salir</span>
+        </button>
       </nav>
 
     </div>

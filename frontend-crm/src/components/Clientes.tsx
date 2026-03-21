@@ -1,7 +1,7 @@
 import ClientList from './ClientList';
 import { Users } from 'lucide-react';
 
-export default function Clientes() {
+export default function Clientes({ user }: { user: any }) {
   return (
     <div className="p-6 md:p-8 animate-fade-in">
       <div className="mb-6 flex items-center gap-3">

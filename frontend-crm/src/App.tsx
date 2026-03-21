@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Componentes estructurales
 import Layout from './components/Layout';
-import Login from './components/Login'; // <--- IMPORTAMOS EL LOGIN
+import Login from './components/Login';
 
 // Pantallas del sistema
 import Dashboard from './components/Dashboard';
@@ -12,12 +12,11 @@ import CalendarView from './components/CalendarView';
 import Clientes from './components/Clientes';
 import Asistentes from './components/Asistentes';
 import Tareas from './components/Tareas';
+import PanelAsistente from './components/PanelAsistente'; // <--- IMPORTANTE: Nueva pantalla
 
 function App() {
-  // Estado para saber quién está usando la app
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Al cargar la app, nos fijamos si ya había iniciado sesión antes
   useEffect(() => {
     const savedUser = localStorage.getItem('crm_user');
     if (savedUser) {
@@ -25,24 +24,47 @@ function App() {
     }
   }, []);
 
-  // EL CANDADO: Si no hay usuario, devolvemos SOLO la pantalla de Login
+  const handleLogout = () => {
+    localStorage.removeItem('crm_user');
+    setCurrentUser(null);
+  };
+
   if (!currentUser) {
     return <Login onLogin={setCurrentUser} />;
   }
 
-  // SI EL CANDADO SE ABRE: Mostramos el Layout (menú) y todas las rutas
+  const isAdmin = currentUser.role === 'admin';
+
   return (
-    <Layout>
+    <Layout user={currentUser} onLogout={handleLogout}>
       <Routes>
-        {/* Rutas Ocultas (Detalles y Calendario) */}
-        <Route path="/client/:id" element={<ClientDetails />} />
-        <Route path="/calendar" element={<CalendarView />} />
-        
-        {/* Rutas del Menú Principal */}
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/clientes" element={<Clientes />} /> 
-        <Route path="/asistentes" element={<Asistentes />} />
-        <Route path="/tareas" element={<Tareas />} />
+        {/* --- RUTA DE INICIO DINÁMICA --- */}
+        <Route 
+          path="/" 
+          element={
+            isAdmin 
+              ? <Dashboard /> 
+              : <PanelAsistente user={currentUser} />
+          } 
+        />
+
+        {/* --- RUTAS COMPARTIDAS (con filtros internos) --- */}
+        <Route path="/tareas" element={<Tareas user={currentUser} />} />
+        <Route path="/clientes" element={<Clientes user={currentUser} />} />
+
+        {/* --- RUTAS EXCLUSIVAS PARA ADMIN (KARINA) --- */}
+        {isAdmin && (
+          <>
+            <Route path="/asistentes" element={<Asistentes />} />
+            <Route path="/client/:id" element={<ClientDetails />} />
+            <Route path="/calendar" element={<CalendarView />} />
+          </>
+        )}
+
+        {/* Redirección por si un asistente intenta entrar a una ruta de admin */}
+        {!isAdmin && (
+          <Route path="*" element={<Navigate to="/" replace />} />
+        )}
       </Routes>
     </Layout>
   );

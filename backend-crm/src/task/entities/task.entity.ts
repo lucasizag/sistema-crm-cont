@@ -20,6 +20,9 @@ export class Task {
   @Column({ type: 'date', nullable: true })
   dueDate: Date | null;
 
+  @Column({ nullable: true })
+  comment: string;
+
   // --- NUEVAS COLUMNAS DE HORAS ---
   @Column('float', { default: 0 }) 
   estimatedHours: number; // Horas Presupuestadas
