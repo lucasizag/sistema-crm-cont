@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateClientDto } from './create-client.dto';
-
-export class UpdateClientDto extends PartialType(CreateClientDto) {}
+export class UpdateClientDto {
+  name?: string;
+  cuit?: string;
+  taxType?: string;
+  startDate?: string | Date;
+  closeMonth?: string; 
+  dropDate?: string | Date; 
+}
