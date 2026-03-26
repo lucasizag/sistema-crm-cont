@@ -13,14 +13,16 @@ interface Props {
 export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: propClientId }: Props) {
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [clientId, setClientId] = useState('');
   
-  // Función para crear un renglón limpio (con la fecha de hoy por defecto)
+  // BLINDAJE: Inicializamos directo con el prop si existe
+  const [clientId, setClientId] = useState(propClientId || '');
+  
+  // EL CAMBIO ESTÁ ACÁ: createdAt arranca vacío ('')
   const createEmptyRow = () => ({
     id: Date.now(),
     title: '',
     assignedTo: '',
-    createdAt: new Date().toISOString().split('T')[0], // Hoy por defecto
+    createdAt: '', 
     assistantDeadline: '',
     dueDate: '',
   });
@@ -79,11 +81,10 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
         else if (generalTitle) finalTitle = generalTitle;
         else if (row.title) finalTitle = row.title;
 
-        // Mandamos la nueva fecha (createdAt) y quitamos la condición
         return api.post('/task', {
           title: finalTitle,
           description: description || null,
-          clientId: clientId || null,
+          clientId: propClientId || clientId || null,
           assignedToId: row.assignedTo || null,
           createdAt: row.createdAt || null, 
           dueDate: row.dueDate || null,
@@ -143,7 +144,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                   className={`block w-full rounded-xl border p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors ${
                     propClientId ? 'bg-slate-200 border-slate-300 text-slate-700 font-bold cursor-not-allowed opacity-100' : 'bg-white border-slate-200'
                   }`}
-                  value={clientId} 
+                  value={propClientId || clientId} 
                   onChange={(e) => setClientId(e.target.value)}
                 >
                   <option value="">-- Sin Cliente Específico --</option>
@@ -181,7 +182,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     {index + 1}.
                   </span>
                   
-                  {/* TAREA */}
                   <div className="w-full sm:flex-1">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Nombre Tarea</label>
                     <input 
@@ -191,7 +191,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     />
                   </div>
                   
-                  {/* NUEVO: ASIGNACION */}
                   <div className="w-full sm:w-32">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
                     <input 
@@ -201,7 +200,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     />
                   </div>
 
-                  {/* DEADLINE ASISTENTE */}
                   <div className="w-full sm:w-32">
                     <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asist.</label>
                     <input 
@@ -211,7 +209,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     />
                   </div>
 
-                  {/* VENCIMIENTO (antes Venc. Estudio) */}
                   <div className="w-full sm:w-32">
                     <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Vencimiento</label>
                     <input 
@@ -221,7 +218,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     />
                   </div>
 
-                  {/* RESPONSABLE */}
                   <div className="w-full sm:w-40">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
                     <select 

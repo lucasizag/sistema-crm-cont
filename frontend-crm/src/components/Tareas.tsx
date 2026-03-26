@@ -88,7 +88,6 @@ export default function Tareas({ user }: { user: any }) {
     return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'A tiempo' };
   };
 
-  // FUNCIÓN ANTI-ZONA HORARIA
   const formatDateSafe = (dateString?: string) => {
     if (!dateString) return '-';
     const [year, month, day] = dateString.split('T')[0].split('-');
@@ -223,8 +222,9 @@ export default function Tareas({ user }: { user: any }) {
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
                 <tr>
-                  <th className="p-4 w-12 text-center"></th> 
-                  <th className="p-4">Tarea y Descripción</th>
+                  <th className="p-4 w-12 text-center"></th>
+                  {/* CAMBIO: Solo dice "Tarea" */}
+                  <th className="p-4">Tarea</th>
                   <th className="p-4">Cliente</th>
                   {isAdmin && <th className="p-4 text-center">Responsable</th>}
                   <th className="p-4 text-center">Asignación</th>
@@ -247,8 +247,9 @@ export default function Tareas({ user }: { user: any }) {
                         </button>
                       </td>
 
+                      {/* CAMBIO: Se eliminó la descripción de aquí */}
                       <td className="p-4 align-top">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mt-1">
                           <p className={`font-bold text-sm ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             {task.title}
                           </p>
@@ -258,11 +259,6 @@ export default function Tareas({ user }: { user: any }) {
                             </span>
                           )}
                         </div>
-                        {task.description && (
-                          <p className={`text-xs mt-1.5 whitespace-pre-line ${isCompleted ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {task.description}
-                          </p>
-                        )}
                         {!isCompleted && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
                       </td>
 

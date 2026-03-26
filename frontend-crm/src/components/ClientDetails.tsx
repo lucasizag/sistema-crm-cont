@@ -1,84 +1,94 @@
-import { useEffect, useState } from 'react';
-import { Plus, Search, CheckSquare, Trash2, Pencil, Filter, Calendar as CalendarIcon, Square, CheckCircle2, Eye } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Calendar, 
+  Trash2, 
+  CheckSquare, 
+  Square, 
+  Pencil, 
+  AlertTriangle,
+  Eye
+} from 'lucide-react';
 import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal'; 
 import ViewTaskModal from './ViewTaskModal';
 
-export default function Tareas({ user }: { user: any }) {
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editingTask, setEditingTask] = useState<any>(null);
-  const [viewingTask, setViewingTask] = useState<any>(null); 
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: string;
+  status: string;
+  condition?: string;
+  assignedTo?: { id: string; name: string };
+  client?: { id: string; name: string };
+  createdAt?: string;
+  assistantDeadline?: string;
+}
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterClient, setFilterClient] = useState("");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
-  const [filterStatus, setFilterStatus] = useState("PENDIENTE");
+interface Client {
+  id: string;
+  name: string;
+  cuit: string;
+  taxType: string;
+  closeMonth?: string; 
+  dropDate?: string;   
+  tasks: Task[];
+}
 
-  const isAdmin = user?.role === 'admin';
+export default function ClientDetails({ user }: { user: any }) {
+  const { id } = useParams();
+  
+  const [client, setClient] = useState<Client | null>(null);
+  const [error, setError] = useState("");
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null); 
+
+  const fetchClientData = useCallback(async () => {
+    if (!id) return;
+    try {
+      setError(""); 
+      const clientRes = await api.get(`/client/${id}`);
+      setClient(clientRes.data);
+    } catch (err: any) {
+      console.error("ERROR CRÍTICO:", err);
+      setError(err.response?.data?.message || err.message || "Error desconocido al servidor.");
+    }
+  }, [id]);
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    fetchClientData();
+  }, [fetchClientData]);
 
-  const fetchTasks = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.get('/task');
-      const data = isAdmin ? response.data : response.data.filter((t: any) => t.assignedTo?.id === user.id);
-      setTasks(data);
-    } catch (error) {
-      console.error("Error cargando tareas:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleCreateTask = () => setIsCreateModalOpen(true);
+
+  const handleEditTask = (task: Task) => {
+    const taskWithClient = { ...task, client: { id: client?.id, name: client?.name } };
+    setEditingTask(taskWithClient as any); 
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta tarea?")) {
-      try {
-        await api.delete(`/task/${id}`);
-        fetchTasks();
-      } catch (error) {
-        alert("Error al eliminar la tarea.");
-      }
-    }
-  };
-
-  const toggleTaskStatus = async (task: any) => {
+  const toggleTaskStatus = async (task: Task) => {
     try {
-      const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
-      const newStatus = isCompleted ? 'PENDIENTE' : 'COMPLETADA';
+      const newStatus = task.status === 'PENDIENTE' ? 'COMPLETADA' : 'PENDIENTE';
       await api.patch(`/task/${task.id}`, { status: newStatus });
-      fetchTasks();
+      fetchClientData();
     } catch (error) { console.error(error); }
   };
 
-  const filteredTasks = tasks.filter(task => {
-    const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
-    const taskStatus = isCompleted ? 'COMPLETADA' : 'PENDIENTE';
-
-    const matchStatus = filterStatus === "" || taskStatus === filterStatus;
-    const matchSearch = searchTerm === "" || 
-      task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchClient = filterClient === "" || task.client?.id === filterClient;
-
-    const taskDate = task.dueDate ? task.dueDate.split('T')[0] : '';
-    const matchDateFrom = filterDateFrom === "" || taskDate >= filterDateFrom;
-    const matchDateTo = filterDateTo === "" || taskDate <= filterDateTo;
-
-    return matchStatus && matchSearch && matchClient && matchDateFrom && matchDateTo;
-  });
-
-  const uniqueClients = Array.from(new Map(tasks.filter(t => t.client).map(t => [t.client.id, t.client])).values());
+  const deleteTask = async (taskId: string) => {
+    if (!confirm('¿Borrar tarea?')) return;
+    try { 
+      await api.delete(`/task/${taskId}`); 
+      fetchClientData(); 
+    } catch (error) { console.error(error); }
+  };
 
   const getDeadlineStyle = (dueDate: string, status: string) => {
-    const isCompleted = status === 'COMPLETADA' || status === 'completed';
-    if (isCompleted) return { color: 'bg-slate-100 text-slate-500 border-slate-200', text: 'Completada' };
+    if (status === 'COMPLETADA') return { color: 'bg-slate-100 text-slate-500 border-slate-200', text: 'Completada' };
     if (!dueDate) return { color: 'bg-slate-50 text-slate-600', text: 'Sin fecha' };
     
     const diffDays = Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (86400000));
@@ -88,264 +98,167 @@ export default function Tareas({ user }: { user: any }) {
     return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'A tiempo' };
   };
 
-  // FUNCIÓN ANTI-ZONA HORARIA
   const formatDateSafe = (dateString?: string) => {
     if (!dateString) return '-';
     const [year, month, day] = dateString.split('T')[0].split('-');
     return `${day}/${month}/${year}`;
   };
 
+  if (error) return (
+    <div className="p-10 text-center flex flex-col items-center justify-center h-[50vh]">
+      <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+      <h2 className="text-2xl font-bold text-slate-800">Ups, algo salió mal</h2>
+      <p className="text-red-600 mt-2 bg-red-50 p-4 rounded border border-red-200">{error}</p>
+      <Link to="/" className="mt-6 text-indigo-600 hover:underline">Volver al inicio</Link>
+    </div>
+  );
+
+  if (!client) return <div className="p-10 text-center text-slate-500">Cargando datos del cliente...</div>;
+
   return (
-    <div className="p-6 md:p-8 animate-fade-in max-w-[1500px] mx-auto">
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-100 p-2.5 rounded-xl text-indigo-600 border border-indigo-200 shadow-sm">
-            <CheckSquare className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              {isAdmin ? 'Gestión de Tareas' : 'Mis Tareas Asignadas'}
-            </h1>
-            <p className="text-slate-500 text-sm">
-              {isAdmin ? 'Control general en formato lista.' : 'Listado de tus tareas.'}
-            </p>
-          </div>
+    <div className="max-w-6xl mx-auto mt-10 p-6 mb-20 animate-fade-in">
+      <Link to="/" className="flex items-center text-slate-500 hover:text-indigo-600 mb-6 w-fit transition-colors">
+        <ArrowLeft className="w-5 h-5 mr-1" /> Volver al listado
+      </Link>
+
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 border-l-4 border-l-indigo-600">
+        <h1 className="text-3xl font-bold text-slate-800">{client.name}</h1>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-slate-600 font-medium">
+          <p>🆔 CUIT: {client.cuit || 'No especificado'}</p>
+          <p>⚖️ {client.taxType || 'Sin condición'}</p>
+          <p>📅 Cierre: {client.closeMonth || 'No especificado'}</p>
         </div>
-        
-        {isAdmin && (
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-600" /> Control de Tareas
+          </h2>
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all shadow-sm"
+            onClick={handleCreateTask} 
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm"
           >
-            <Plus className="w-4 h-4" /> Crear Trámite / Tarea
+            + Nueva Tarea
           </button>
-        )}
-      </div>
-
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-end">
-        <div className="w-full sm:w-auto flex-1 min-w-[140px]">
-          <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Estado
-          </label>
-          <select
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium text-slate-700"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="">Todas</option>
-            <option value="PENDIENTE">⏳ Solo Pendientes</option>
-            <option value="COMPLETADA">✅ Terminadas</option>
-          </select>
         </div>
 
-        <div className="w-full sm:w-auto flex-1 min-w-[200px]">
-          <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-            <Search className="w-3.5 h-3.5" /> Palabra clave
-          </label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {client.tasks && client.tasks.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="p-4 w-12 text-center"></th>
+                    {/* CAMBIO: Solo dice "Tarea" */}
+                    <th className="p-4">Tarea</th>
+                    <th className="p-4 text-center">Responsable</th>
+                    <th className="p-4 text-center">Asignación</th>
+                    <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
+                    <th className="p-4 text-center text-red-600">Venc. Estudio</th>
+                    <th className="p-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {client.tasks.map(task => {
+                    const urgency = getDeadlineStyle(task.dueDate, task.status);
 
-        {isAdmin && (
-          <div className="w-full sm:w-auto flex-1 min-w-[200px]">
-            <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5" /> Cliente
-            </label>
-            <select
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-              value={filterClient}
-              onChange={(e) => setFilterClient(e.target.value)}
-            >
-              <option value="">Todos los clientes</option>
-              {uniqueClients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              <option value="none">-- Tareas Generales --</option>
-            </select>
-          </div>
-        )}
+                    return (
+                      <tr key={task.id} className="hover:bg-slate-50 transition">
+                        
+                        <td className="p-4 text-center align-top pt-5">
+                          <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${task.status === 'COMPLETADA' ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
+                            {task.status === 'COMPLETADA' ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
+                          </button>
+                        </td>
 
-        <div className="w-full sm:w-auto flex-1 min-w-[140px]">
-          <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-            <CalendarIcon className="w-3.5 h-3.5" /> Desde
-          </label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-          />
-        </div>
+                        {/* CAMBIO: Se eliminó la descripción de aquí */}
+                        <td className="p-4 align-top">
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className={`font-bold text-sm ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                              {task.title}
+                            </p>
+                            {task.condition === 'Especial' && (
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
+                                ESPECIAL ⭐
+                              </span>
+                            )}
+                          </div>
+                          {task.status !== 'COMPLETADA' && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
+                        </td>
 
-        <div className="w-full sm:w-auto flex-1 min-w-[140px]">
-          <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-            <CalendarIcon className="w-3.5 h-3.5" /> Hasta
-          </label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-          />
-        </div>
-
-        {(searchTerm || filterClient || filterDateFrom || filterDateTo || filterStatus !== "PENDIENTE") && (
-          <div className="w-full sm:w-auto">
-            <button 
-              onClick={() => {
-                setSearchTerm(""); setFilterClient(""); setFilterDateFrom(""); setFilterDateTo(""); setFilterStatus("PENDIENTE");
-              }}
-              className="w-full sm:w-auto px-4 py-2 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium border border-transparent hover:border-red-100"
-            >
-              Limpiar
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="p-16 text-center">
-            <CheckSquare className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-700">No se encontraron tareas</h3>
-            <p className="text-slate-500 text-sm mt-1">Intenta ajustar los filtros de búsqueda o cambia el "Estado".</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
-                <tr>
-                  <th className="p-4 w-12 text-center"></th> 
-                  <th className="p-4">Tarea y Descripción</th>
-                  <th className="p-4">Cliente</th>
-                  {isAdmin && <th className="p-4 text-center">Responsable</th>}
-                  <th className="p-4 text-center">Asignación</th>
-                  <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
-                  <th className="p-4 text-center text-red-600">Venc. Estudio</th>
-                  {isAdmin && <th className="p-4 text-right">Acciones</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTasks.map(task => {
-                  const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
-                  const urgency = getDeadlineStyle(task.dueDate, isCompleted ? 'COMPLETADA' : 'PENDIENTE');
-
-                  return (
-                    <tr key={task.id} className="hover:bg-slate-50 transition">
-                      
-                      <td className="p-4 text-center align-top pt-5">
-                        <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${isCompleted ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
-                          {isCompleted ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
-                        </button>
-                      </td>
-
-                      <td className="p-4 align-top">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-bold text-sm ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                            {task.title}
-                          </p>
-                          {task.condition === 'Especial' && (
-                            <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
-                              ESPECIAL ⭐
-                            </span>
-                          )}
-                        </div>
-                        {task.description && (
-                          <p className={`text-xs mt-1.5 whitespace-pre-line ${isCompleted ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {task.description}
-                          </p>
-                        )}
-                        {!isCompleted && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
-                      </td>
-
-                      <td className="p-4 align-top pt-5">
-                        {task.client ? (
-                          <span className="text-slate-700 text-sm font-medium">{task.client.name}</span>
-                        ) : (
-                          <span className="text-slate-400 text-xs italic">General</span>
-                        )}
-                      </td>
-
-                      {isAdmin && (
                         <td className="p-4 text-center align-top pt-5">
                           {task.assignedTo ? (
-                            <span className="text-slate-700 text-sm font-semibold">{task.assignedTo.name}</span>
+                            <span className="text-slate-700 text-sm font-semibold">
+                              {task.assignedTo.name}
+                            </span>
                           ) : (
-                            <span className="text-slate-400 text-xs font-medium bg-slate-50 px-2 py-1 rounded-full border border-slate-200">Sin asignar</span>
+                            <span className="text-slate-400 text-xs font-medium bg-slate-50 px-3 py-1 rounded-full border border-slate-200">Sin asignar</span>
                           )}
                         </td>
-                      )}
 
-                      <td className="p-4 text-center text-sm font-medium text-slate-500 align-top pt-5">
-                        {formatDateSafe(task.createdAt)}
-                      </td>
+                        <td className="p-4 text-center text-sm font-medium text-slate-500 align-top pt-5">
+                          {formatDateSafe(task.createdAt)}
+                        </td>
 
-                      <td className="p-4 text-center text-sm font-bold text-indigo-600 align-top pt-5 bg-indigo-50/30">
-                        {formatDateSafe(task.assistantDeadline)}
-                      </td>
+                        <td className="p-4 text-center text-sm font-bold text-indigo-600 align-top pt-5 bg-indigo-50/30">
+                          {formatDateSafe(task.assistantDeadline)}
+                        </td>
 
-                      <td className="p-4 text-center text-sm font-bold text-red-600 align-top pt-5">
-                        {formatDateSafe(task.dueDate)}
-                      </td>
-                      
-                      {isAdmin && (
+                        <td className="p-4 text-sm font-bold text-red-600 align-top pt-5 text-center">
+                          {formatDateSafe(task.dueDate)}
+                        </td>
+                        
                         <td className="p-4 text-right align-top pt-4">
                           <div className="flex justify-end gap-1">
                             <button onClick={() => setViewingTask(task)} className="text-slate-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm" title="Ver Detalles">
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setEditingTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
+                            <button onClick={() => handleEditTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDelete(task.id)} className="text-slate-400 hover:text-red-600 bg-white hover:bg-red-50 p-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all shadow-sm" title="Eliminar">
+                            <button onClick={() => deleteTask(task.id)} className="text-slate-400 hover:text-red-600 bg-white hover:bg-red-50 p-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all shadow-sm" title="Eliminar">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-12 text-center">
+              <CheckSquare className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">No hay tareas creadas para este cliente.</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {isAdmin && (
-        <CreateTaskModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSuccess={fetchTasks} 
-        />
-      )}
+      <CreateTaskModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={fetchClientData} 
+        clientId={client.id}
+      />
 
-      {isAdmin && (
-        <EditTaskModal 
-          isOpen={!!editingTask} 
-          onClose={() => setEditingTask(null)} 
-          onSuccess={() => {
-            setEditingTask(null);
-            fetchTasks(); 
-          }} 
-          task={editingTask}
-        />
-      )}
+      <EditTaskModal 
+        isOpen={!!editingTask} 
+        onClose={() => setEditingTask(null)} 
+        onSuccess={() => {
+          setEditingTask(null);
+          fetchClientData();
+        }} 
+        task={editingTask}
+      />
 
       <ViewTaskModal 
         isOpen={!!viewingTask} 
         onClose={() => setViewingTask(null)} 
         task={viewingTask} 
       />
-
     </div>
   );
 }
