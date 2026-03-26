@@ -7,13 +7,15 @@ import {
   CheckSquare, 
   Square, 
   Pencil, 
-  AlertTriangle 
+  AlertTriangle,
+  Eye
 } from 'lucide-react';
 import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal'; 
+import ViewTaskModal from './ViewTaskModal';
 
-// --- 1. DEFINICIONES DE TIPOS ---
+// --- DEFINICIONES DE TIPOS ---
 interface Task {
   id: string;
   title: string;
@@ -23,8 +25,8 @@ interface Task {
   condition?: string;
   assignedTo?: { id: string; name: string };
   client?: { id: string; name: string };
-  estimatedHours: number;
-  actualHours: number;
+  createdAt?: string;
+  assistantDeadline?: string;
 }
 
 interface Client {
@@ -32,8 +34,8 @@ interface Client {
   name: string;
   cuit: string;
   taxType: string;
-  closeMonth?: string; // <-- AGREGAMOS ESTO
-  dropDate?: string;   // <-- Y ESTO YA QUE ESTAMOS
+  closeMonth?: string; 
+  dropDate?: string;   
   tasks: Task[];
 }
 
@@ -45,6 +47,7 @@ export default function ClientDetails() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null); // ESTADO PARA EL OJITO
 
   const fetchClientData = useCallback(async () => {
     if (!id) return;
@@ -66,7 +69,6 @@ export default function ClientDetails() {
     setIsCreateModalOpen(true);
   };
 
-  // ESTA ES LA MAGIA DEL BOTÓN EDITAR QUE YA FUNCIONA
   const handleEditTask = (task: Task) => {
     const taskWithClient = { ...task, client: { id: client?.id, name: client?.name } };
     setEditingTask(taskWithClient as any); 
@@ -116,7 +118,6 @@ export default function ClientDetails() {
         <ArrowLeft className="w-5 h-5 mr-1" /> Volver al listado
       </Link>
 
-      {/* CABECERA DEL CLIENTE */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 border-l-4 border-l-indigo-600">
         <h1 className="text-3xl font-bold text-slate-800">{client.name}</h1>
         <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-slate-600 font-medium">
@@ -145,19 +146,18 @@ export default function ClientDetails() {
               <table className="w-full text-left">
                 <thead className="bg-slate-50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
                   <tr>
-                    <th className="p-4 w-16 text-center">Estado</th>
+                    <th className="p-4 w-12 text-center"></th>
                     <th className="p-4">Tarea y Descripción</th>
-                    <th className="p-4 text-center">Horas (Est/Real)</th>
                     <th className="p-4 text-center">Responsable</th>
-                    <th className="p-4">Vencimiento</th>
+                    <th className="p-4 text-center">Asignación</th>
+                    <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
+                    <th className="p-4 text-center text-red-600">Venc. Estudio</th>
                     <th className="p-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {client.tasks.map(task => {
                     const urgency = getDeadlineStyle(task.dueDate, task.status);
-                    const diff = task.actualHours - task.estimatedHours;
-                    const hoursColor = diff > 0 ? 'text-red-600 font-bold' : 'text-emerald-600 font-medium';
 
                     return (
                       <tr key={task.id} className="hover:bg-slate-50 transition">
@@ -179,35 +179,15 @@ export default function ClientDetails() {
                               </span>
                             )}
                           </div>
-                          
-                          {/* ACÁ ESTÁ LA DESCRIPCIÓN AGREGADA */}
                           {task.description && (
                             <p className={`text-xs mt-1.5 whitespace-pre-line ${task.status === 'COMPLETADA' ? 'text-slate-400' : 'text-slate-600'}`}>
                               {task.description}
                             </p>
                           )}
-                          
                           {task.status !== 'COMPLETADA' && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
                         </td>
 
-                        <td className="p-4 text-center align-top">
-                          <div className="flex flex-col items-center text-xs">
-                            <span className="text-slate-500">
-                              Est: <b className="text-slate-700">{task.estimatedHours}h</b>
-                            </span>
-                            <span className="text-slate-800 mt-0.5">
-                              Real: <b>{task.actualHours}h</b>
-                            </span>
-                            {(task.estimatedHours > 0 || task.actualHours > 0) && (
-                              <span className={`mt-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 ${hoursColor}`}>
-                                {diff > 0 ? `+${diff}h` : `${diff}h`}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
                         <td className="p-4 text-center align-top pt-5">
-                          {/* ACÁ QUITAMOS EL ICONO, SOLO SE MUESTRA EL NOMBRE LIMPIO */}
                           {task.assignedTo ? (
                             <span className="text-slate-700 text-sm font-semibold">
                               {task.assignedTo.name}
@@ -217,12 +197,23 @@ export default function ClientDetails() {
                           )}
                         </td>
 
-                        <td className="p-4 text-sm font-medium text-slate-600 align-top pt-5">
+                        <td className="p-4 text-center text-sm font-medium text-slate-500 align-top pt-5">
+                          {task.createdAt ? new Date(task.createdAt).toLocaleDateString('es-AR') : '-'}
+                        </td>
+
+                        <td className="p-4 text-center text-sm font-bold text-indigo-600 align-top pt-5 bg-indigo-50/30">
+                          {task.assistantDeadline ? new Date(task.assistantDeadline).toLocaleDateString('es-AR') : '-'}
+                        </td>
+
+                        <td className="p-4 text-sm font-bold text-red-600 align-top pt-5 text-center">
                           {task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-AR') : '-'}
                         </td>
                         
                         <td className="p-4 text-right align-top pt-4">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1">
+                            <button onClick={() => setViewingTask(task)} className="text-slate-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm" title="Ver Detalles">
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button onClick={() => handleEditTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -261,6 +252,12 @@ export default function ClientDetails() {
           fetchClientData();
         }} 
         task={editingTask}
+      />
+
+      <ViewTaskModal 
+        isOpen={!!viewingTask} 
+        onClose={() => setViewingTask(null)} 
+        task={viewingTask} 
       />
     </div>
   );

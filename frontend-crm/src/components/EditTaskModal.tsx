@@ -18,7 +18,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     title: '',
     description: '',
     dueDate: '',
-    estimatedHours: 0,
+    assistantDeadline: '', // NUEVO: Deadline interno
     condition: 'Predeterminada',
     clientId: '',
     assignedToId: ''
@@ -26,12 +26,11 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   useEffect(() => {
     if (isOpen && task) {
-      // Cargamos los datos actuales de la tarea en el formulario
       setFormData({
         title: task.title || '',
         description: task.description || '',
-        dueDate: task.dueDate ? task.dueDate.split('T')[0] : '', // Formateamos la fecha
-        estimatedHours: task.estimatedHours || 0,
+        dueDate: task.dueDate ? task.dueDate.split('T')[0] : '', 
+        assistantDeadline: task.assistantDeadline ? task.assistantDeadline.split('T')[0] : '', 
         condition: task.condition || 'Predeterminada',
         clientId: task.client?.id || '',
         assignedToId: task.assignedTo?.id || ''
@@ -58,8 +57,16 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     setLoading(true);
 
     try {
-      // Enviamos la actualización al backend
-      await api.patch(`/task/${task.id}`, formData);
+      // Limpiamos los datos: si las fechas o IDs están vacíos, mandamos null
+      const payload = {
+        ...formData,
+        dueDate: formData.dueDate || null,
+        assistantDeadline: formData.assistantDeadline || null,
+        clientId: formData.clientId || null,
+        assignedToId: formData.assignedToId || null,
+      };
+
+      await api.patch(`/task/${task.id}`, payload);
       onSuccess();
     } catch (error) {
       console.error(error);
@@ -133,22 +140,23 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
             </div>
           </div>
 
+          {/* GRILLA DE FECHAS Y CONDICIÓN (SIN HORAS) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimiento</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimiento Estudio</label>
               <input 
-                type="date" required
+                type="date"
                 className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600"
                 value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Horas Est.</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Deadline Asistente</label>
               <input 
-                type="number" step="0.5" min="0" required
-                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none"
-                value={formData.estimatedHours} onChange={(e) => setFormData({...formData, estimatedHours: parseFloat(e.target.value)})}
+                type="date"
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-indigo-50/50 text-slate-600"
+                value={formData.assistantDeadline} onChange={(e) => setFormData({...formData, assistantDeadline: e.target.value})}
               />
             </div>
 
@@ -158,7 +166,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
                 className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
                 value={formData.condition} onChange={(e) => setFormData({...formData, condition: e.target.value})}
               >
-                <option value="Predeterminada">Predeterminada</option>
+                <option value="Predeterminada">Estándar</option>
                 <option value="Especial">Especial ⭐</option>
               </select>
             </div>

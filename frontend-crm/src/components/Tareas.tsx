@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, CheckSquare, Trash2, Pencil, Filter, Calendar as CalendarIcon, Square, CheckCircle2 } from 'lucide-react';import api from '../api';
+import { Plus, Search, CheckSquare, Trash2, Pencil, Filter, Calendar as CalendarIcon, Square, CheckCircle2, Eye } from 'lucide-react';
+import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal'; 
+import ViewTaskModal from './ViewTaskModal';
 
 export default function Tareas({ user }: { user: any }) {
   const [tasks, setTasks] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [viewingTask, setViewingTask] = useState<any>(null); // ESTADO PARA EL OJITO
 
-  // --- ESTADOS DE FILTROS ---
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClient, setFilterClient] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
-  // NUEVO: Filtro de estado (Por defecto muestra solo las pendientes)
   const [filterStatus, setFilterStatus] = useState("PENDIENTE");
 
   const isAdmin = user?.role === 'admin';
@@ -49,34 +50,23 @@ export default function Tareas({ user }: { user: any }) {
 
   const toggleTaskStatus = async (task: any) => {
     try {
-      // Normalizamos el estado por si viene como 'completed' o 'COMPLETADA'
       const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
       const newStatus = isCompleted ? 'PENDIENTE' : 'COMPLETADA';
-      
       await api.patch(`/task/${task.id}`, { status: newStatus });
       fetchTasks();
     } catch (error) { console.error(error); }
   };
 
-  // --- LÓGICA DE FILTRADO MÚLTIPLE ---
   const filteredTasks = tasks.filter(task => {
-    
-    // Normalizamos el estado actual de la tarea para comparar fácil
     const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
     const taskStatus = isCompleted ? 'COMPLETADA' : 'PENDIENTE';
 
-    // 1. Filtro por Estado
     const matchStatus = filterStatus === "" || taskStatus === filterStatus;
-
-    // 2. Filtro por Palabra Clave (Título o Descripción)
     const matchSearch = searchTerm === "" || 
       task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // 3. Filtro por Cliente
     const matchClient = filterClient === "" || task.client?.id === filterClient;
 
-    // 4. Filtro por Fechas
     const taskDate = task.dueDate ? task.dueDate.split('T')[0] : '';
     const matchDateFrom = filterDateFrom === "" || taskDate >= filterDateFrom;
     const matchDateTo = filterDateTo === "" || taskDate <= filterDateTo;
@@ -84,7 +74,6 @@ export default function Tareas({ user }: { user: any }) {
     return matchStatus && matchSearch && matchClient && matchDateFrom && matchDateTo;
   });
 
-  // Extraer clientes únicos para el menú desplegable del filtro
   const uniqueClients = Array.from(new Map(tasks.filter(t => t.client).map(t => [t.client.id, t.client])).values());
 
   const getDeadlineStyle = (dueDate: string, status: string) => {
@@ -102,7 +91,6 @@ export default function Tareas({ user }: { user: any }) {
   return (
     <div className="p-6 md:p-8 animate-fade-in max-w-[1500px] mx-auto">
       
-      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-100 p-2.5 rounded-xl text-indigo-600 border border-indigo-200 shadow-sm">
@@ -128,10 +116,7 @@ export default function Tareas({ user }: { user: any }) {
         )}
       </div>
 
-      {/* BARRA DE FILTROS (Ahora usa Flex-Wrap para que entren todos bien) */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-end">
-        
-        {/* NUEVO: Filtro de Estado */}
         <div className="w-full sm:w-auto flex-1 min-w-[140px]">
           <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" /> Estado
@@ -203,7 +188,6 @@ export default function Tareas({ user }: { user: any }) {
           />
         </div>
 
-        {/* Botón para limpiar filtros */}
         {(searchTerm || filterClient || filterDateFrom || filterDateTo || filterStatus !== "PENDIENTE") && (
           <div className="w-full sm:w-auto">
             <button 
@@ -218,7 +202,6 @@ export default function Tareas({ user }: { user: any }) {
         )}
       </div>
 
-      {/* TABLA DE TAREAS */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>
@@ -233,12 +216,13 @@ export default function Tareas({ user }: { user: any }) {
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
                 <tr>
-                  <th className="p-4 w-16 text-center">Estado</th>
+                  <th className="p-4 w-12 text-center"></th> {/* Columna Checkbox */}
                   <th className="p-4">Tarea y Descripción</th>
                   <th className="p-4">Cliente</th>
-                  <th className="p-4 text-center">Horas</th>
                   {isAdmin && <th className="p-4 text-center">Responsable</th>}
-                  <th className="p-4">Vencimiento</th>
+                  <th className="p-4 text-center">Asignación</th>
+                  <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
+                  <th className="p-4 text-center text-red-600">Venc. Estudio</th>
                   {isAdmin && <th className="p-4 text-right">Acciones</th>}
                 </tr>
               </thead>
@@ -246,13 +230,11 @@ export default function Tareas({ user }: { user: any }) {
                 {filteredTasks.map(task => {
                   const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
                   const urgency = getDeadlineStyle(task.dueDate, isCompleted ? 'COMPLETADA' : 'PENDIENTE');
-                  const diff = task.actualHours - task.estimatedHours;
-                  const hoursColor = diff > 0 ? 'text-red-600 font-bold' : 'text-emerald-600 font-medium';
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50 transition">
                       
-                      {/* CHECKBOX PARA MARCAR TERMINADO */}
+                      {/* CHECKBOX (Sin texto de "Estado" en cabecera) */}
                       <td className="p-4 text-center align-top pt-5">
                         <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${isCompleted ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
                           {isCompleted ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
@@ -288,19 +270,6 @@ export default function Tareas({ user }: { user: any }) {
                         )}
                       </td>
 
-                      {/* HORAS */}
-                      <td className="p-4 text-center align-top">
-                        <div className="flex flex-col items-center text-xs">
-                          <span className="text-slate-500">Est: <b className="text-slate-700">{task.estimatedHours}h</b></span>
-                          <span className="text-slate-800 mt-0.5">Real: <b>{task.actualHours}h</b></span>
-                          {(task.estimatedHours > 0 || task.actualHours > 0) && (
-                            <span className={`mt-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 ${hoursColor}`}>
-                              {diff > 0 ? `+${diff}h` : `${diff}h`}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
                       {/* RESPONSABLE (Solo Admin) */}
                       {isAdmin && (
                         <td className="p-4 text-center align-top pt-5">
@@ -312,15 +281,29 @@ export default function Tareas({ user }: { user: any }) {
                         </td>
                       )}
 
-                      {/* VENCIMIENTO */}
-                      <td className="p-4 text-sm font-medium text-slate-600 align-top pt-5">
+                      {/* FECHA ASIGNACION */}
+                      <td className="p-4 text-center text-sm font-medium text-slate-500 align-top pt-5">
+                        {task.createdAt ? new Date(task.createdAt).toLocaleDateString('es-AR') : '-'}
+                      </td>
+
+                      {/* DEADLINE ASISTENTE */}
+                      <td className="p-4 text-center text-sm font-bold text-indigo-600 align-top pt-5 bg-indigo-50/30">
+                        {task.assistantDeadline ? new Date(task.assistantDeadline).toLocaleDateString('es-AR') : '-'}
+                      </td>
+
+                      {/* VENCIMIENTO ESTUDIO */}
+                      <td className="p-4 text-center text-sm font-bold text-red-600 align-top pt-5">
                         {task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-AR') : '-'}
                       </td>
                       
                       {/* ACCIONES (Solo Admin) */}
                       {isAdmin && (
                         <td className="p-4 text-right align-top pt-4">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1">
+                            {/* BOTON OJITO */}
+                            <button onClick={() => setViewingTask(task)} className="text-slate-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm" title="Ver Detalles">
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button onClick={() => setEditingTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -339,7 +322,6 @@ export default function Tareas({ user }: { user: any }) {
         )}
       </div>
 
-      {/* MODALES */}
       {isAdmin && (
         <CreateTaskModal 
           isOpen={isModalOpen} 
@@ -360,6 +342,13 @@ export default function Tareas({ user }: { user: any }) {
         />
       )}
 
+      {/* MODAL DEL OJITO */}
+      <ViewTaskModal 
+        isOpen={!!viewingTask} 
+        onClose={() => setViewingTask(null)} 
+        task={viewingTask} 
+      />
+
     </div>
   );
-} 
+}
