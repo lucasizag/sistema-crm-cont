@@ -14,12 +14,12 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
   const [clients, setClients] = useState<any[]>([]);
   const [assistants, setAssistants] = useState<any[]>([]);
 
+  // Eliminamos la variable 'condition'
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     dueDate: '',
-    assistantDeadline: '', // NUEVO: Deadline interno
-    condition: 'Predeterminada',
+    assistantDeadline: '',
     clientId: '',
     assignedToId: ''
   });
@@ -31,7 +31,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
         description: task.description || '',
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '', 
         assistantDeadline: task.assistantDeadline ? task.assistantDeadline.split('T')[0] : '', 
-        condition: task.condition || 'Predeterminada',
         clientId: task.client?.id || '',
         assignedToId: task.assignedTo?.id || ''
       });
@@ -57,7 +56,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     setLoading(true);
 
     try {
-      // Limpiamos los datos: si las fechas o IDs están vacíos, mandamos null
       const payload = {
         ...formData,
         dueDate: formData.dueDate || null,
@@ -140,8 +138,8 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
             </div>
           </div>
 
-          {/* GRILLA DE FECHAS Y CONDICIÓN (SIN HORAS) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Ajustamos a grid-cols-2 ahora que solo hay dos fechas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimiento Estudio</label>
               <input 
@@ -158,17 +156,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
                 className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-indigo-50/50 text-slate-600"
                 value={formData.assistantDeadline} onChange={(e) => setFormData({...formData, assistantDeadline: e.target.value})}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Condición</label>
-              <select 
-                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
-                value={formData.condition} onChange={(e) => setFormData({...formData, condition: e.target.value})}
-              >
-                <option value="Predeterminada">Estándar</option>
-                <option value="Especial">Especial ⭐</option>
-              </select>
             </div>
           </div>
 

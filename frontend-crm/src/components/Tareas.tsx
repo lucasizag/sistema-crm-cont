@@ -14,8 +14,6 @@ export default function Tareas({ user }: { user: any }) {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClient, setFilterClient] = useState("");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
   const [filterStatus, setFilterStatus] = useState("PENDIENTE");
 
   const isAdmin = user?.role === 'admin';
@@ -67,11 +65,7 @@ export default function Tareas({ user }: { user: any }) {
       task.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchClient = filterClient === "" || task.client?.id === filterClient;
 
-    const taskDate = task.dueDate ? task.dueDate.split('T')[0] : '';
-    const matchDateFrom = filterDateFrom === "" || taskDate >= filterDateFrom;
-    const matchDateTo = filterDateTo === "" || taskDate <= filterDateTo;
-
-    return matchStatus && matchSearch && matchClient && matchDateFrom && matchDateTo;
+    return matchStatus && matchSearch && matchClient;
   });
 
   const uniqueClients = Array.from(new Map(tasks.filter(t => t.client).map(t => [t.client.id, t.client])).values());
@@ -165,40 +159,15 @@ export default function Tareas({ user }: { user: any }) {
               {uniqueClients.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-              <option value="none">-- Tareas Generales --</option>
             </select>
           </div>
         )}
 
-        <div className="w-full sm:w-auto flex-1 min-w-[140px]">
-          <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-            <CalendarIcon className="w-3.5 h-3.5" /> Desde
-          </label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-          />
-        </div>
-
-        <div className="w-full sm:w-auto flex-1 min-w-[140px]">
-          <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
-            <CalendarIcon className="w-3.5 h-3.5" /> Hasta
-          </label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-          />
-        </div>
-
-        {(searchTerm || filterClient || filterDateFrom || filterDateTo || filterStatus !== "PENDIENTE") && (
+        {(searchTerm || filterClient || filterStatus !== "PENDIENTE") && (
           <div className="w-full sm:w-auto">
             <button 
               onClick={() => {
-                setSearchTerm(""); setFilterClient(""); setFilterDateFrom(""); setFilterDateTo(""); setFilterStatus("PENDIENTE");
+                setSearchTerm(""); setFilterClient(""); setFilterStatus("PENDIENTE");
               }}
               className="w-full sm:w-auto px-4 py-2 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium border border-transparent hover:border-red-100"
             >
@@ -223,7 +192,6 @@ export default function Tareas({ user }: { user: any }) {
               <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
                 <tr>
                   <th className="p-4 w-12 text-center"></th>
-                  {/* CAMBIO: Solo dice "Tarea" */}
                   <th className="p-4">Tarea</th>
                   <th className="p-4">Cliente</th>
                   {isAdmin && <th className="p-4 text-center">Responsable</th>}
@@ -247,17 +215,11 @@ export default function Tareas({ user }: { user: any }) {
                         </button>
                       </td>
 
-                      {/* CAMBIO: Se eliminó la descripción de aquí */}
                       <td className="p-4 align-top">
                         <div className="flex items-center gap-2 mt-1">
                           <p className={`font-bold text-sm ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             {task.title}
                           </p>
-                          {task.condition === 'Especial' && (
-                            <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
-                              ESPECIAL ⭐
-                            </span>
-                          )}
                         </div>
                         {!isCompleted && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
                       </td>

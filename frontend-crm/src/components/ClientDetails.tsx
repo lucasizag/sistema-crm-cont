@@ -40,7 +40,7 @@ interface Client {
 
 export default function ClientDetails({ user }: { user: any }) {
   const { id } = useParams();
-
+  
   const isAdmin = user?.role === 'admin';
   const [client, setClient] = useState<Client | null>(null);
   const [error, setError] = useState("");
@@ -136,8 +136,6 @@ export default function ClientDetails({ user }: { user: any }) {
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-indigo-600" /> Control de Tareas
           </h2>
-          
-          {/* ---> ENVOLVEMOS EL BOTÓN CON isAdmin <--- */}
           {isAdmin && (
             <button 
               onClick={handleCreateTask} 
@@ -146,7 +144,6 @@ export default function ClientDetails({ user }: { user: any }) {
               + Nueva Tarea
             </button>
           )}
-
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -156,7 +153,6 @@ export default function ClientDetails({ user }: { user: any }) {
                 <thead className="bg-slate-50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
                   <tr>
                     <th className="p-4 w-12 text-center"></th>
-                    {/* CAMBIO: Solo dice "Tarea" */}
                     <th className="p-4">Tarea</th>
                     <th className="p-4 text-center">Responsable</th>
                     <th className="p-4 text-center">Asignación</th>
@@ -178,17 +174,11 @@ export default function ClientDetails({ user }: { user: any }) {
                           </button>
                         </td>
 
-                        {/* CAMBIO: Se eliminó la descripción de aquí */}
                         <td className="p-4 align-top">
                           <div className="flex items-center gap-2 mt-1">
                             <p className={`font-bold text-sm ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                               {task.title}
                             </p>
-                            {task.condition === 'Especial' && (
-                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
-                                ESPECIAL ⭐
-                              </span>
-                            )}
                           </div>
                           {task.status !== 'COMPLETADA' && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
                         </td>
