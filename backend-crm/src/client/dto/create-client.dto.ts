@@ -2,7 +2,10 @@ export class CreateClientDto {
   name: string;
   cuit: string;
   taxType: string;
+  address?: string;
+  email?: string;
+  phone?: string;
   startDate?: string | Date;
-  closeMonth?: string; // NUEVO: Mes de cierre (Ej: 'Diciembre')
-  dropDate?: string | Date; // NUEVO: Fecha de baja definitiva
+  closeMonth?: string;
+  dropDate?: string | Date;
 }

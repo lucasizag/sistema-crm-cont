@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Task } from '../../task/entities/task.entity';
-import { Note } from '../../note/entities/note.entity'; // <--- Importar
+import { Note } from '../../note/entities/note.entity';
 
 @Entity()
 export class Client {
@@ -16,10 +16,20 @@ export class Client {
   @Column()
   taxType: string;
 
+  // --- NUEVAS COLUMNAS DE CONTACTO ---
+  @Column({ nullable: true })
+  address: string;
+
+  @Column({ nullable: true })
+  email: string;
+
+  @Column({ nullable: true })
+  phone: string;
+  // -----------------------------------
+
   @OneToMany(() => Task, (task) => task.client)
   tasks: Task[];
 
-  // --- AGREGAR ESTO ---
   @OneToMany(() => Note, (note) => note.client)
   notes: Note[];
 
