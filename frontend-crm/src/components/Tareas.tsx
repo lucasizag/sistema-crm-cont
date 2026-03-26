@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, CheckSquare, Trash2, Pencil, Filter, Calendar as CalendarIcon, Square, CheckCircle2, Eye } from 'lucide-react';
+import { Plus, Search, CheckSquare, Trash2, Pencil, Filter, Square, CheckCircle2, Eye } from 'lucide-react';
 import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal'; 
