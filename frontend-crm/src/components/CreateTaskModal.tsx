@@ -15,7 +15,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   
-  // ESTADO LIMPIO: Sin horas, con assistantDeadline
   const [taskRows, setTaskRows] = useState([
     { id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }
   ]);
@@ -74,7 +73,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
         else if (generalTitle) finalTitle = generalTitle;
         else if (row.title) finalTitle = row.title;
 
-        // payload limpio, sin horas y con el nuevo deadline
         return api.post('/task', {
           title: finalTitle,
           description: description || null,
@@ -168,58 +166,68 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {taskRows.map((row, index) => (
-                <div key={row.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-white p-2 rounded-xl border border-slate-200 group">
+                <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-4 sm:p-2 rounded-xl border border-slate-200 group">
                   
-                  <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block">
+                  <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">
                     {index + 1}.
                   </span>
                   
-                  <input 
-                    type="text" placeholder="Ej: Cargar comprobantes" title="Nombre de la tarea"
-                    className="flex-1 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
-                    value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)}
-                  />
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Nombre Tarea</label>
+                    <input 
+                      type="text" placeholder="Ej: Cargar comprobantes"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
+                      value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)}
+                    />
+                  </div>
                   
                   <div className="w-full sm:w-36">
-                    <label className="block sm:hidden text-[10px] font-bold text-slate-400 mb-1">Venc. Estudio</label>
+                    <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Venc. Estudio</label>
                     <input 
-                      type="date" title="Vencimiento Final (Estudio)"
+                      type="date"
                       className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
                       value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
                     />
                   </div>
 
                   <div className="w-full sm:w-36">
-                    <label className="block sm:hidden text-[10px] font-bold text-slate-400 mb-1">Deadline Asistente</label>
+                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asist.</label>
                     <input 
-                      type="date" title="Deadline Interno (Asistente)"
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none bg-indigo-50/50"
+                      type="date"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none bg-indigo-50/30"
                       value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)}
                     />
                   </div>
 
-                  <select 
-                    className="w-full sm:w-40 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
-                    value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}
-                  >
-                    <option value="">-- Sin Asignar --</option>
-                    {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <div className="w-full sm:w-40">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
+                    <select 
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
+                      value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}
+                    >
+                      <option value="">-- Sin Asignar --</option>
+                      {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
 
-                  <select 
-                    className="w-full sm:w-32 rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
-                    value={row.condition} 
-                    onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
-                  >
-                    <option value="Predeterminada">Estándar</option>
-                    <option value="Especial">Especial ⭐</option>
-                  </select>
+                  <div className="w-full sm:w-28">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Condición</label>
+                    <select 
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
+                      value={row.condition} 
+                      onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
+                    >
+                      <option value="Predeterminada">Estándar</option>
+                      <option value="Especial">Especial ⭐</option>
+                    </select>
+                  </div>
 
                   <button 
                     type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1}
-                    className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 transition"
+                    className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 transition mb-0.5"
+                    title="Eliminar renglón"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

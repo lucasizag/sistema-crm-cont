@@ -3,18 +3,11 @@ export class CreateTaskDto {
   description?: string;
   status?: string;
   
-  // --- LOS CAMPOS NUEVOS QUE AGREGAMOS ---
   dueDate?: Date | string;
-  estimatedHours?: number;
-  actualHours?: number;
+  assistantDeadline?: string | Date; 
   comment?: string;
 
-  // --- LAS RELACIONES ---
-  client?: any;
-  assignedTo?: any;
   clientId?: string;
   assignedToId?: string;
   condition?: string;
-
-  assistantDeadline?: string | Date;
 }
