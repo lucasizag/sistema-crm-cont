@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Plus, Trash2, ListChecks } from 'lucide-react'; // Quitamos el icono Repeat
+import { X, Plus, Trash2, ListChecks } from 'lucide-react';
 import api from '../api';
 
 interface Props {
@@ -11,14 +11,13 @@ interface Props {
 }
 
 export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: propClientId }: Props) {
-  // Datos Generales
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   
-  // Renglones de Tareas (SIN required, todo opcional)
+  // ESTADO LIMPIO: Sin horas, con assistantDeadline
   const [taskRows, setTaskRows] = useState([
-    { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }
+    { id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }
   ]);
 
   const [clients, setClients] = useState<any[]>([]);
@@ -30,7 +29,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
       setGeneralTitle('');
       setDescription('');
       setClientId(propClientId || ''); 
-      setTaskRows([{ id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }]);
+      setTaskRows([{ id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }]);
       fetchDropdownData();
     }
   }, [isOpen, propClientId]); 
@@ -49,7 +48,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   };
 
   const addRow = () => {
-    setTaskRows([...taskRows, { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }]);
+    setTaskRows([...taskRows, { id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }]);
   };
 
   const removeRow = (idToRemove: number) => {
@@ -70,22 +69,19 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
     try {
       const promises = taskRows.map(row => {
-        // Armamos el título de forma inteligente (por si dejan los campos vacíos)
         let finalTitle = 'Tarea sin título';
         if (generalTitle && row.title) finalTitle = `${generalTitle} - ${row.title}`;
         else if (generalTitle) finalTitle = generalTitle;
         else if (row.title) finalTitle = row.title;
 
-        const hours = row.estimatedHours ? parseFloat(row.estimatedHours) : 0;
-
-        // Comportamiento normal: 1 sola creación directa por renglón
+        // payload limpio, sin horas y con el nuevo deadline
         return api.post('/task', {
           title: finalTitle,
           description: description || null,
           clientId: clientId || null,
           assignedToId: row.assignedTo || null,
           dueDate: row.dueDate || null,
-          estimatedHours: hours,
+          assistantDeadline: row.assistantDeadline || null,
           condition: row.condition || 'Predeterminada'
         });
       });
@@ -186,17 +182,23 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)}
                   />
                   
-                  <input 
-                    type="date" title="Fecha límite base"
-                    className="w-full sm:w-36 rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
-                    value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
-                  />
+                  <div className="w-full sm:w-36">
+                    <label className="block sm:hidden text-[10px] font-bold text-slate-400 mb-1">Venc. Estudio</label>
+                    <input 
+                      type="date" title="Vencimiento Final (Estudio)"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
+                      value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
+                    />
+                  </div>
 
-                  <input 
-                    type="number" step="0.5" min="0" placeholder="Hs est." title="Horas estimadas"
-                    className="w-full sm:w-20 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
-                    value={row.estimatedHours} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)}
-                  />
+                  <div className="w-full sm:w-36">
+                    <label className="block sm:hidden text-[10px] font-bold text-slate-400 mb-1">Deadline Asistente</label>
+                    <input 
+                      type="date" title="Deadline Interno (Asistente)"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none bg-indigo-50/50"
+                      value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)}
+                    />
+                  </div>
 
                   <select 
                     className="w-full sm:w-40 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
@@ -207,11 +209,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                   </select>
 
                   <select 
-                    className="w-full sm:w-36 rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
+                    className="w-full sm:w-32 rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
                     value={row.condition} 
                     onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
                   >
-                    <option value="Predeterminada">Predeterminada</option>
+                    <option value="Predeterminada">Estándar</option>
                     <option value="Especial">Especial ⭐</option>
                   </select>
 

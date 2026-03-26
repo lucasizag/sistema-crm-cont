@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
 import { Client } from '../../client/entities/client.entity';
 import { User } from '../../user/entities/user.entity';
 import { Attachment } from '../../attachment/entities/attachment.entity';
@@ -20,18 +20,19 @@ export class Task {
   @Column({ type: 'date', nullable: true })
   dueDate: Date | null;
 
+  // --- NUEVAS COLUMNAS DE FECHAS ---
+  @Column({ type: 'date', nullable: true })
+  assistantDeadline: Date | null; // Fecha límite para el asistente
+
+  @CreateDateColumn()
+  createdAt: Date; // Fecha en la que se creó/asignó la tarea
+  // ---------------------------------
+
   @Column({ default: 'Predeterminada' })
   condition: string;
 
   @Column({ nullable: true })
   comment: string;
-
-  // --- NUEVAS COLUMNAS DE HORAS ---
-  @Column('float', { default: 0 }) 
-  estimatedHours: number; // Horas Presupuestadas
-
-  @Column('float', { default: 0 }) 
-  actualHours: number;    // Horas Reales Insumidas
 
   @ManyToOne(() => Client, (client) => client.tasks)
   client: Client;

@@ -15,4 +15,6 @@ export class CreateTaskDto {
   clientId?: string;
   assignedToId?: string;
   condition?: string;
+
+  assistantDeadline?: string | Date;
 }
