@@ -5,6 +5,7 @@ export class CreateTaskDto {
   
   dueDate?: Date | string;
   assistantDeadline?: string | Date; 
+  createdAt?: string | Date;
   comment?: string;
 
   clientId?: string;

@@ -24,8 +24,8 @@ export class Task {
   @Column({ type: 'date', nullable: true })
   assistantDeadline: Date | null; // Fecha límite para el asistente
 
-  @CreateDateColumn()
-  createdAt: Date; // Fecha en la que se creó/asignó la tarea
+  @Column({ type: 'date', nullable: true })
+  createdAt: Date | null; // Fecha en la que se creó/asignó la tarea
   // ---------------------------------
 
   @Column({ default: 'Predeterminada' })

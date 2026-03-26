@@ -10,15 +10,14 @@ export class TaskService {
   constructor(@InjectRepository(Task) private taskRepo: Repository<Task>) {}
 
   async create(createTaskDto: CreateTaskDto) {
-    // 1. Creamos la tarea con los campos limpios
     const newTask = this.taskRepo.create({
       title: createTaskDto.title,
       description: createTaskDto.description, 
       dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : null,
       assistantDeadline: createTaskDto.assistantDeadline ? new Date(createTaskDto.assistantDeadline) : null,
+      createdAt: createTaskDto.createdAt ? new Date(createTaskDto.createdAt) : new Date(), // <--- ESTA LÍNEA NUEVA
       status: createTaskDto.status || 'PENDIENTE',
       comment: createTaskDto.comment,
-      condition: createTaskDto.condition || 'Predeterminada',
     });
 
     // 2. Atrapamos el ID directamente (SIN intentar buscar el objeto)

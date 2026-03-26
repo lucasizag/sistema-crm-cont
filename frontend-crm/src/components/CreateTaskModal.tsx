@@ -15,9 +15,17 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   
-  const [taskRows, setTaskRows] = useState([
-    { id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }
-  ]);
+  // Función para crear un renglón limpio (con la fecha de hoy por defecto)
+  const createEmptyRow = () => ({
+    id: Date.now(),
+    title: '',
+    assignedTo: '',
+    createdAt: new Date().toISOString().split('T')[0], // Hoy por defecto
+    assistantDeadline: '',
+    dueDate: '',
+  });
+
+  const [taskRows, setTaskRows] = useState([createEmptyRow()]);
 
   const [clients, setClients] = useState<any[]>([]);
   const [assistants, setAssistants] = useState<any[]>([]);
@@ -28,7 +36,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
       setGeneralTitle('');
       setDescription('');
       setClientId(propClientId || ''); 
-      setTaskRows([{ id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }]);
+      setTaskRows([createEmptyRow()]);
       fetchDropdownData();
     }
   }, [isOpen, propClientId]); 
@@ -46,9 +54,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     }
   };
 
-  const addRow = () => {
-    setTaskRows([...taskRows, { id: Date.now(), title: '', assignedTo: '', dueDate: '', assistantDeadline: '', condition: 'Predeterminada' }]);
-  };
+  const addRow = () => setTaskRows([...taskRows, createEmptyRow()]);
 
   const removeRow = (idToRemove: number) => {
     if (taskRows.length > 1) {
@@ -73,14 +79,15 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
         else if (generalTitle) finalTitle = generalTitle;
         else if (row.title) finalTitle = row.title;
 
+        // Mandamos la nueva fecha (createdAt) y quitamos la condición
         return api.post('/task', {
           title: finalTitle,
           description: description || null,
           clientId: clientId || null,
           assignedToId: row.assignedTo || null,
+          createdAt: row.createdAt || null, 
           dueDate: row.dueDate || null,
-          assistantDeadline: row.assistantDeadline || null,
-          condition: row.condition || 'Predeterminada'
+          assistantDeadline: row.assistantDeadline || null
         });
       });
 
@@ -134,7 +141,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                 <select 
                   disabled={!!propClientId} 
                   className={`block w-full rounded-xl border p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors ${
-                    propClientId ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border-slate-200'
+                    propClientId ? 'bg-slate-200 border-slate-300 text-slate-700 font-bold cursor-not-allowed opacity-100' : 'bg-white border-slate-200'
                   }`}
                   value={clientId} 
                   onChange={(e) => setClientId(e.target.value)}
@@ -174,6 +181,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     {index + 1}.
                   </span>
                   
+                  {/* TAREA */}
                   <div className="w-full sm:flex-1">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Nombre Tarea</label>
                     <input 
@@ -183,16 +191,18 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     />
                   </div>
                   
-                  <div className="w-full sm:w-36">
-                    <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Venc. Estudio</label>
+                  {/* NUEVO: ASIGNACION */}
+                  <div className="w-full sm:w-32">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
                     <input 
                       type="date"
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
-                      value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none bg-slate-50"
+                      value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)}
                     />
                   </div>
 
-                  <div className="w-full sm:w-36">
+                  {/* DEADLINE ASISTENTE */}
+                  <div className="w-full sm:w-32">
                     <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asist.</label>
                     <input 
                       type="date"
@@ -201,6 +211,17 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     />
                   </div>
 
+                  {/* VENCIMIENTO (antes Venc. Estudio) */}
+                  <div className="w-full sm:w-32">
+                    <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Vencimiento</label>
+                    <input 
+                      type="date"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
+                      value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
+                    />
+                  </div>
+
+                  {/* RESPONSABLE */}
                   <div className="w-full sm:w-40">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
                     <select 
@@ -209,18 +230,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                     >
                       <option value="">-- Sin Asignar --</option>
                       {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="w-full sm:w-28">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Condición</label>
-                    <select 
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
-                      value={row.condition} 
-                      onChange={(e) => updateRow(row.id, 'condition', e.target.value)}
-                    >
-                      <option value="Predeterminada">Estándar</option>
-                      <option value="Especial">Especial ⭐</option>
                     </select>
                   </div>
 
@@ -240,7 +249,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
             <button type="button" onClick={onClose} className="w-1/4 bg-white border border-slate-200 py-3 rounded-xl hover:bg-slate-50 font-medium text-sm">
               Cancelar
             </button>
-            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 font-medium text-sm flex justify-center">
+            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 font-medium text-sm flex justify-center shadow-sm">
               {loading ? 'Guardando...' : `Guardar ${taskRows.length} Tarea(s)`}
             </button>
           </div>
