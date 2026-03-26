@@ -157,7 +157,7 @@ export default function ClientDetails({ user }: { user: any }) {
                     <th className="p-4 text-center">Responsable</th>
                     <th className="p-4 text-center">Asignación</th>
                     <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
-                    <th className="p-4 text-center text-red-600">Venc. Estudio</th>
+                    <th className="p-4 text-center text-red-600">Vencimiento</th>
                     <th className="p-4 text-right">Acciones</th>
                   </tr>
                 </thead>

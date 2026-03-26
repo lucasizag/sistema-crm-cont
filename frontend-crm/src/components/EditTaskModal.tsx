@@ -141,7 +141,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
           {/* Ajustamos a grid-cols-2 ahora que solo hay dos fechas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimiento Estudio</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimiento</label>
               <input 
                 type="date"
                 className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600"

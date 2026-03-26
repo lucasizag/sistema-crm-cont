@@ -62,7 +62,7 @@ export default function ViewTaskModal({ isOpen, onClose, task }: Props) {
             <p className="text-sm font-bold text-indigo-700">{task.assistantDeadline ? new Date(task.assistantDeadline).toLocaleDateString('es-AR') : '-'}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Vencimiento Estudio</p>
+            <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Vencimiento</p>
             <p className="text-sm font-bold text-red-600">{task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-AR') : '-'}</p>
           </div>
         </div>
