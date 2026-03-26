@@ -10,7 +10,7 @@ export default function Clientes({ user }: { user: any }) {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Directorio de Clientes</h1>
-          <p className="text-slate-500 text-sm">Gestiona la información y documentos de todos tus clientes.</p>
+          <p className="text-slate-500 text-sm">Gestiona la información de clientes</p>
         </div>
       </div>
       
