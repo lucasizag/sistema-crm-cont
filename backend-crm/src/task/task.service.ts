@@ -10,38 +10,31 @@ export class TaskService {
   constructor(@InjectRepository(Task) private taskRepo: Repository<Task>) {}
 
   async create(createTaskDto: CreateTaskDto) {
-    // 1. Creamos la tarea solo con los textos y números
+    // 1. Creamos la tarea con los campos limpios
     const newTask = this.taskRepo.create({
       title: createTaskDto.title,
       description: createTaskDto.description, 
-      dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : undefined,
+      dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : null,
+      assistantDeadline: createTaskDto.assistantDeadline ? new Date(createTaskDto.assistantDeadline) : null,
       status: createTaskDto.status || 'PENDIENTE',
       comment: createTaskDto.comment,
-      estimatedHours: createTaskDto.estimatedHours || 0,
-      actualHours: createTaskDto.actualHours || 0,
       condition: createTaskDto.condition || 'Predeterminada',
     });
 
-    // 2. Atrapamos el ID sin importar cómo lo haya mandado el Frontend
-    const clientId = createTaskDto.clientId || (createTaskDto.client?.id);
-    const assignedToId = createTaskDto.assignedToId || (createTaskDto.assignedTo?.id);
+    // 2. Atrapamos el ID directamente (SIN intentar buscar el objeto)
+    const clientId = createTaskDto.clientId;
+    const assignedToId = createTaskDto.assignedToId;
 
-    // 3. Inyectamos las relaciones de forma directa (esto nunca falla)
-    if (clientId) {
-      newTask.client = { id: clientId } as any;
-    }
-    
-    if (assignedToId) {
-      newTask.assignedTo = { id: assignedToId } as any;
-    }
+    // 3. Inyectamos las relaciones
+    if (clientId) newTask.client = { id: clientId } as any;
+    if (assignedToId) newTask.assignedTo = { id: assignedToId } as any;
 
-    // 4. Guardamos en la base de datos
     return this.taskRepo.save(newTask);
   }
 
   findAll() {
     return this.taskRepo.find({
-      relations: ['client', 'assignedTo'], // Cargamos quien es el dueño y el responsable
+      relations: ['client', 'assignedTo'], 
       order: { dueDate: 'ASC' }
     });
   }
@@ -49,7 +42,7 @@ export class TaskService {
   findOne(id: string) {
     return this.taskRepo.findOne({
       where: { id },
-      relations: ['client', 'assignedTo', 'attachments'] // Cargamos adjuntos también
+      relations: ['client', 'assignedTo', 'attachments'] 
     });
   }
 
@@ -57,24 +50,27 @@ export class TaskService {
     const task = await this.taskRepo.findOne({ where: { id } });
     if (!task) throw new NotFoundException('Tarea no encontrada');
 
-    // Actualizamos campos simples
     if (updateTaskDto.title) task.title = updateTaskDto.title;
     if (updateTaskDto.description !== undefined) task.description = updateTaskDto.description;
     if (updateTaskDto.status) task.status = updateTaskDto.status;
-    if (updateTaskDto.dueDate) task.dueDate = new Date(updateTaskDto.dueDate);
+    
+    // Guardado seguro de fechas (acepta null si el usuario decide borrarla)
+    if (updateTaskDto.dueDate !== undefined) {
+      task.dueDate = updateTaskDto.dueDate ? new Date(updateTaskDto.dueDate) : null;
+    }
+    if (updateTaskDto.assistantDeadline !== undefined) {
+      task.assistantDeadline = updateTaskDto.assistantDeadline ? new Date(updateTaskDto.assistantDeadline) : null;
+    }
+
     if (updateTaskDto.comment !== undefined) task.comment = updateTaskDto.comment;
     if (updateTaskDto.condition) task.condition = updateTaskDto.condition;
     
-    // Actualizamos horas
-    if (updateTaskDto.estimatedHours !== undefined) task.estimatedHours = updateTaskDto.estimatedHours;
-    if (updateTaskDto.actualHours !== undefined) task.actualHours = updateTaskDto.actualHours;
-
     // Actualizamos responsable y cliente
-    if (updateTaskDto.assignedToId) {
-      task.assignedTo = { id: updateTaskDto.assignedToId } as any;
+    if (updateTaskDto.assignedToId !== undefined) {
+      task.assignedTo = updateTaskDto.assignedToId ? { id: updateTaskDto.assignedToId } as any : null;
     }
-    if (updateTaskDto.clientId) {
-      task.client = { id: updateTaskDto.clientId } as any;
+    if (updateTaskDto.clientId !== undefined) {
+      task.client = updateTaskDto.clientId ? { id: updateTaskDto.clientId } as any : null;
     }
 
     return this.taskRepo.save(task);

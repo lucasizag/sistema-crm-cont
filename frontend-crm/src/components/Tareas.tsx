@@ -10,7 +10,7 @@ export default function Tareas({ user }: { user: any }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<any>(null);
-  const [viewingTask, setViewingTask] = useState<any>(null); // ESTADO PARA EL OJITO
+  const [viewingTask, setViewingTask] = useState<any>(null); 
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClient, setFilterClient] = useState("");
@@ -86,6 +86,13 @@ export default function Tareas({ user }: { user: any }) {
     if (diffDays < 0) return { color: 'bg-red-100 text-red-700 border-red-200 font-bold', text: 'VENCIDA' };
     if (diffDays <= 3) return { color: 'bg-orange-100 text-orange-700 border-orange-200 font-bold', text: 'Urgente' };
     return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'A tiempo' };
+  };
+
+  // FUNCIÓN ANTI-ZONA HORARIA
+  const formatDateSafe = (dateString?: string) => {
+    if (!dateString) return '-';
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -216,7 +223,7 @@ export default function Tareas({ user }: { user: any }) {
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
                 <tr>
-                  <th className="p-4 w-12 text-center"></th> {/* Columna Checkbox */}
+                  <th className="p-4 w-12 text-center"></th> 
                   <th className="p-4">Tarea y Descripción</th>
                   <th className="p-4">Cliente</th>
                   {isAdmin && <th className="p-4 text-center">Responsable</th>}
@@ -234,14 +241,12 @@ export default function Tareas({ user }: { user: any }) {
                   return (
                     <tr key={task.id} className="hover:bg-slate-50 transition">
                       
-                      {/* CHECKBOX (Sin texto de "Estado" en cabecera) */}
                       <td className="p-4 text-center align-top pt-5">
                         <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${isCompleted ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
                           {isCompleted ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
                         </button>
                       </td>
 
-                      {/* TAREA Y DESCRIPCIÓN */}
                       <td className="p-4 align-top">
                         <div className="flex items-center gap-2">
                           <p className={`font-bold text-sm ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
@@ -261,7 +266,6 @@ export default function Tareas({ user }: { user: any }) {
                         {!isCompleted && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
                       </td>
 
-                      {/* CLIENTE */}
                       <td className="p-4 align-top pt-5">
                         {task.client ? (
                           <span className="text-slate-700 text-sm font-medium">{task.client.name}</span>
@@ -270,7 +274,6 @@ export default function Tareas({ user }: { user: any }) {
                         )}
                       </td>
 
-                      {/* RESPONSABLE (Solo Admin) */}
                       {isAdmin && (
                         <td className="p-4 text-center align-top pt-5">
                           {task.assignedTo ? (
@@ -281,26 +284,21 @@ export default function Tareas({ user }: { user: any }) {
                         </td>
                       )}
 
-                      {/* FECHA ASIGNACION */}
                       <td className="p-4 text-center text-sm font-medium text-slate-500 align-top pt-5">
-                        {task.createdAt ? new Date(task.createdAt).toLocaleDateString('es-AR') : '-'}
+                        {formatDateSafe(task.createdAt)}
                       </td>
 
-                      {/* DEADLINE ASISTENTE */}
                       <td className="p-4 text-center text-sm font-bold text-indigo-600 align-top pt-5 bg-indigo-50/30">
-                        {task.assistantDeadline ? new Date(task.assistantDeadline).toLocaleDateString('es-AR') : '-'}
+                        {formatDateSafe(task.assistantDeadline)}
                       </td>
 
-                      {/* VENCIMIENTO ESTUDIO */}
                       <td className="p-4 text-center text-sm font-bold text-red-600 align-top pt-5">
-                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-AR') : '-'}
+                        {formatDateSafe(task.dueDate)}
                       </td>
                       
-                      {/* ACCIONES (Solo Admin) */}
                       {isAdmin && (
                         <td className="p-4 text-right align-top pt-4">
                           <div className="flex justify-end gap-1">
-                            {/* BOTON OJITO */}
                             <button onClick={() => setViewingTask(task)} className="text-slate-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm" title="Ver Detalles">
                               <Eye className="w-4 h-4" />
                             </button>
@@ -342,7 +340,6 @@ export default function Tareas({ user }: { user: any }) {
         />
       )}
 
-      {/* MODAL DEL OJITO */}
       <ViewTaskModal 
         isOpen={!!viewingTask} 
         onClose={() => setViewingTask(null)} 
