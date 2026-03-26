@@ -26,6 +26,9 @@ export class Client {
   @Column({ type: 'date', nullable: true })
   startDate: Date | null; // Fecha de Alta
 
+  @Column({ nullable: true })
+  closeMonth: string; // Mes de cierre de ejercicio (Ej: 'Diciembre')
+
   @Column({ type: 'date', nullable: true })
-  closeDate: Date | null; // Fecha de Cierre (Cese)
+  dropDate: Date | null; // Fecha de baja definitiva del estudio
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Plus, Trash2, ListChecks, Repeat } from 'lucide-react';
+import { X, Plus, Trash2, ListChecks } from 'lucide-react'; // Quitamos el icono Repeat
 import api from '../api';
 
 interface Props {
@@ -16,10 +16,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   
-  // --- ESTADO DE FRECUENCIA ---
-  const [recurrence, setRecurrence] = useState('none'); 
-  
-  // Renglones de Tareas (AGREGADO condition)
+  // Renglones de Tareas (SIN required, todo opcional)
   const [taskRows, setTaskRows] = useState([
     { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }
   ]);
@@ -33,8 +30,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
       setGeneralTitle('');
       setDescription('');
       setClientId(propClientId || ''); 
-      setRecurrence('none');
-      // AGREGADO condition AL ABRIR
       setTaskRows([{ id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }]);
       fetchDropdownData();
     }
@@ -54,7 +49,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   };
 
   const addRow = () => {
-    // AGREGADO condition AL CREAR RENGLÓN
     setTaskRows([...taskRows, { id: Date.now(), title: '', assignedTo: '', dueDate: '', estimatedHours: '', condition: 'Predeterminada' }]);
   };
 
@@ -75,67 +69,25 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     setLoading(true);
 
     try {
-      const promises: any[] = [];
+      const promises = taskRows.map(row => {
+        // Armamos el título de forma inteligente (por si dejan los campos vacíos)
+        let finalTitle = 'Tarea sin título';
+        if (generalTitle && row.title) finalTitle = `${generalTitle} - ${row.title}`;
+        else if (generalTitle) finalTitle = generalTitle;
+        else if (row.title) finalTitle = row.title;
 
-      taskRows.forEach(row => {
-        const baseTitle = generalTitle ? `${generalTitle} - ${row.title}` : row.title;
         const hours = row.estimatedHours ? parseFloat(row.estimatedHours) : 0;
-        
-        const baseDate = row.dueDate ? new Date(row.dueDate + 'T12:00:00') : new Date();
 
-        if (recurrence === 'none') {
-          // COMPORTAMIENTO NORMAL
-          promises.push(api.post('/task', {
-            title: baseTitle,
-            description: description,
-            clientId: clientId || null,
-            assignedToId: row.assignedTo || null,
-            dueDate: row.dueDate || null,
-            estimatedHours: hours,
-            condition: row.condition // AGREGADO
-          }));
-
-        } else if (recurrence === 'monthly') {
-          // COMPORTAMIENTO MENSUAL
-          for (let i = 0; i < 12; i++) {
-            const d = new Date(baseDate);
-            d.setMonth(baseDate.getMonth() + i);
-            
-            const monthName = d.toLocaleString('es-AR', { month: 'long' });
-            const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-            
-            const monthlyTitle = `${baseTitle} (${capitalizedMonth} ${d.getFullYear()})`;
-
-            promises.push(api.post('/task', {
-              title: monthlyTitle,
-              description: description,
-              clientId: clientId || null,
-              assignedToId: row.assignedTo || null,
-              dueDate: d.toISOString().split('T')[0], 
-              estimatedHours: hours,
-              condition: row.condition // AGREGADO
-            }));
-          }
-
-        } else if (recurrence === 'yearly') {
-          // COMPORTAMIENTO ANUAL
-          for (let i = 0; i < 5; i++) {
-            const d = new Date(baseDate);
-            d.setFullYear(baseDate.getFullYear() + i);
-
-            const yearlyTitle = `${baseTitle} (${d.getFullYear()})`;
-
-            promises.push(api.post('/task', {
-              title: yearlyTitle,
-              description: description,
-              clientId: clientId || null,
-              assignedToId: row.assignedTo || null,
-              dueDate: d.toISOString().split('T')[0],
-              estimatedHours: hours,
-              condition: row.condition // AGREGADO
-            }));
-          }
-        }
+        // Comportamiento normal: 1 sola creación directa por renglón
+        return api.post('/task', {
+          title: finalTitle,
+          description: description || null,
+          clientId: clientId || null,
+          assignedToId: row.assignedTo || null,
+          dueDate: row.dueDate || null,
+          estimatedHours: hours,
+          condition: row.condition || 'Predeterminada'
+        });
       });
 
       await Promise.all(promises);
@@ -144,7 +96,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Hubo un error al guardar las tareas recurrentes.');
+      alert('Hubo un error al guardar las tareas.');
     } finally {
       setLoading(false);
     }
@@ -166,18 +118,18 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">Cargar Tareas / Trámite</h2>
-            <p className="text-sm text-slate-500">Agrupa varias acciones o crea tareas recurrentes automáticamente.</p>
+            <p className="text-sm text-slate-500">Agrupa varias acciones para un cliente.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Título General (Trámite)</label>
                 <input 
-                  type="text" required placeholder="Ej: Liquidación IVA" 
+                  type="text" placeholder="Ej: Liquidación IVA" 
                   className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
                   value={generalTitle} onChange={(e) => setGeneralTitle(e.target.value)}
                 />
@@ -186,7 +138,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente Asociado</label>
                 <select 
-                  required 
                   disabled={!!propClientId} 
                   className={`block w-full rounded-xl border p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors ${
                     propClientId ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border-slate-200'
@@ -194,28 +145,14 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                   value={clientId} 
                   onChange={(e) => setClientId(e.target.value)}
                 >
-                  <option value="">-- Seleccionar --</option>
+                  <option value="">-- Sin Cliente Específico --</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                  <Repeat className="w-3.5 h-3.5 text-indigo-500" /> Frecuencia
-                </label>
-                <select 
-                  className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm font-medium text-indigo-700"
-                  value={recurrence} onChange={(e) => setRecurrence(e.target.value)}
-                >
-                  <option value="none">Una sola vez</option>
-                  <option value="monthly">Todos los meses (Genera 1 año)</option>
-                  <option value="yearly">Todos los años (Genera 5 años)</option>
                 </select>
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción / Notas (Opcional)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción / Notas</label>
               <textarea 
                 rows={2} placeholder="Detalles que aplican a todas las tareas..."
                 className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
@@ -244,32 +181,31 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                   </span>
                   
                   <input 
-                    type="text" required placeholder="Ej: Cargar comprobantes" title="Nombre de la tarea"
+                    type="text" placeholder="Ej: Cargar comprobantes" title="Nombre de la tarea"
                     className="flex-1 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
                     value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)}
                   />
                   
                   <input 
-                    type="date" required title="Fecha límite base"
+                    type="date" title="Fecha límite base"
                     className="w-full sm:w-36 rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
                     value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
                   />
 
                   <input 
-                    type="number" step="0.5" min="0" placeholder="Hs est." title="Horas estimadas" required
+                    type="number" step="0.5" min="0" placeholder="Hs est." title="Horas estimadas"
                     className="w-full sm:w-20 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
                     value={row.estimatedHours} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)}
                   />
 
                   <select 
-                    required className="w-full sm:w-40 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
+                    className="w-full sm:w-40 rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
                     value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}
                   >
-                    <option value="">-- Asignar --</option>
+                    <option value="">-- Sin Asignar --</option>
                     {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
 
-                  {/* SELECTOR DE CONDICIÓN AGREGADO */}
                   <select 
                     className="w-full sm:w-36 rounded-lg border-slate-200 border p-2 text-sm font-medium focus:border-indigo-500 outline-none text-slate-600"
                     value={row.condition} 
@@ -295,11 +231,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
               Cancelar
             </button>
             <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 font-medium text-sm flex justify-center">
-              {loading 
-                ? 'Generando tareas...' 
-                : recurrence === 'monthly' ? `Crear ${taskRows.length * 12} Tareas Mensuales` 
-                : recurrence === 'yearly' ? `Crear ${taskRows.length * 5} Tareas Anuales` 
-                : `Guardar ${taskRows.length} Tarea(s)`}
+              {loading ? 'Guardando...' : `Guardar ${taskRows.length} Tarea(s)`}
             </button>
           </div>
 

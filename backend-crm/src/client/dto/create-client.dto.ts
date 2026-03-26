@@ -3,5 +3,6 @@ export class CreateClientDto {
   cuit: string;
   taxType: string;
   startDate?: string | Date;
-  closeDate?: string | Date;
+  closeMonth?: string; // NUEVO: Mes de cierre (Ej: 'Diciembre')
+  dropDate?: string | Date; // NUEVO: Fecha de baja definitiva
 }

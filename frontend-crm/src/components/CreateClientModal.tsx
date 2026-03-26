@@ -16,10 +16,14 @@ const PREDEFINED_TAX_TYPES = [
   'Consumidor Final'
 ];
 
+const MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
 export default function CreateClientModal({ isOpen, onClose, onSuccess, clientToEdit }: Props) {
   const [loading, setLoading] = useState(false);
   
-  // Obtenemos la fecha de hoy en formato YYYY-MM-DD para el valor por defecto
   const today = new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
@@ -28,8 +32,9 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
     address: '',
     email: '',
     phone: '',
-    startDate: today, // Por defecto hoy
-    closeDate: '',
+    startDate: today, 
+    closeMonth: '', // NUEVO: Solo el mes
+    dropDate: '',   // NUEVO: Fecha exacta de baja
   });
 
   const [selectedDropdown, setSelectedDropdown] = useState('');
@@ -44,9 +49,9 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
           address: clientToEdit.address || '',
           email: clientToEdit.email || '',
           phone: clientToEdit.phone || '',
-          // Si ya tiene fecha, la cargamos (cortamos la hora por si viene con formato largo)
           startDate: clientToEdit.startDate ? clientToEdit.startDate.split('T')[0] : '',
-          closeDate: clientToEdit.closeDate ? clientToEdit.closeDate.split('T')[0] : '',
+          closeMonth: clientToEdit.closeMonth || '',
+          dropDate: clientToEdit.dropDate ? clientToEdit.dropDate.split('T')[0] : '',
         });
 
         const existingTaxType = clientToEdit.taxType;
@@ -62,8 +67,7 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
           setCustomTaxType(existingTaxType);
         }
       } else {
-        // Nuevo cliente
-        setFormData({ name: '', cuit: '', address: '', email: '', phone: '', startDate: today, closeDate: '' });
+        setFormData({ name: '', cuit: '', address: '', email: '', phone: '', startDate: today, closeMonth: '', dropDate: '' });
         setSelectedDropdown('');
         setCustomTaxType('');
       }
@@ -81,12 +85,12 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
       finalTaxType = selectedDropdown;
     }
 
-    // Armamos el paquete incluyendo las fechas nuevas (si están vacías, mandamos null)
     const payload = {
       ...formData,
       taxType: finalTaxType,
       startDate: formData.startDate || null,
-      closeDate: formData.closeDate || null,
+      closeMonth: formData.closeMonth || null,
+      dropDate: formData.dropDate || null,
     };
 
     try {
@@ -105,7 +109,7 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -136,11 +140,11 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nombre / Razón Social</label>
-              <input type="text" name="name" required value={formData.name} onChange={handleInputChange} className="input-field" placeholder="Ej: Juan Pérez S.A." />
+              <input type="text" name="name" required value={formData.name} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none" placeholder="Ej: Juan Pérez S.A." />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">CUIT</label>
-              <input type="text" name="cuit" value={formData.cuit} onChange={handleInputChange} className="input-field font-mono" placeholder="Ej: 20-33444555-9" />
+              <input type="text" name="cuit" value={formData.cuit} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none font-mono" placeholder="Ej: 20-33444555-9" />
             </div>
           </div>
 
@@ -153,7 +157,7 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
                 <select
                   value={selectedDropdown}
                   onChange={(e) => setSelectedDropdown(e.target.value)}
-                  className="input-field bg-white"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white"
                 >
                   <option value="">-- Seleccionar --</option>
                   <option value="Responsable Inscripto">Responsable Inscripto</option>
@@ -174,7 +178,7 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
                     value={customTaxType}
                     onChange={(e) => setCustomTaxType(e.target.value)}
                     placeholder="Ej: Monotributista Social..."
-                    className="input-field border-indigo-200 focus:border-indigo-500 focus:ring-indigo-100 bg-white"
+                    className="w-full rounded-xl border border-indigo-200 p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-white"
                   />
                 </div>
               )}
@@ -184,43 +188,55 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Correo Electrónico</label>
-              <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="input-field" placeholder="ejemplo@correo.com" />
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none" placeholder="ejemplo@correo.com" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Teléfono de Contacto</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="input-field font-mono" placeholder="Ej: 11 4455-6677" />
+              <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none font-mono" placeholder="Ej: 11 4455-6677" />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Domicilio Fiscal / Comercial</label>
-            <input type="text" name="address" value={formData.address} onChange={handleInputChange} className="input-field" placeholder="Calle 123, Ciudad, Provincia" />
+            <input type="text" name="address" value={formData.address} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none" placeholder="Calle 123, Ciudad, Provincia" />
           </div>
 
-          {/* --- NUEVA SECCIÓN: FECHAS IMPORTANTES --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2 border-t border-slate-100">
+          {/* --- SECCIÓN DE FECHAS (MODIFICADA) --- */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 border-t border-slate-100 mt-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Fecha de Alta
               </label>
               <input 
-                type="date" 
-                name="startDate" 
-                value={formData.startDate} 
-                onChange={handleInputChange} 
-                className="input-field text-slate-600" 
+                type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} 
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600" 
               />
             </div>
+            
+            {/* NUEVO: Mes de cierre de ejercicio */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Fecha de Cierre / Cese <span className="text-slate-400 font-normal">(Opcional)</span>
+                Mes de Cierre <span className="text-slate-400 font-normal">(Ejerc.)</span>
+              </label>
+              <select 
+                name="closeMonth" value={formData.closeMonth} onChange={handleInputChange}
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-slate-600 font-medium"
+              >
+                <option value="">-- Elegir Mes --</option>
+                {MONTHS.map(mes => (
+                  <option key={mes} value={mes}>{mes}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* NUEVO: Fecha de Baja definitiva */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Fecha de Baja <span className="text-slate-400 font-normal">(Cese)</span>
               </label>
               <input 
-                type="date" 
-                name="closeDate" 
-                value={formData.closeDate} 
-                onChange={handleInputChange} 
-                className="input-field text-slate-600" 
+                type="date" name="dropDate" value={formData.dropDate} onChange={handleInputChange} 
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600" 
               />
             </div>
           </div>

@@ -32,6 +32,8 @@ interface Client {
   name: string;
   cuit: string;
   taxType: string;
+  closeMonth?: string; // <-- AGREGAMOS ESTO
+  dropDate?: string;   // <-- Y ESTO YA QUE ESTAMOS
   tasks: Task[];
 }
 
@@ -114,11 +116,13 @@ export default function ClientDetails() {
         <ArrowLeft className="w-5 h-5 mr-1" /> Volver al listado
       </Link>
 
+      {/* CABECERA DEL CLIENTE */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 border-l-4 border-l-indigo-600">
         <h1 className="text-3xl font-bold text-slate-800">{client.name}</h1>
-        <div className="flex gap-6 mt-2 text-slate-600 font-medium">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-slate-600 font-medium">
           <p>🆔 CUIT: {client.cuit || 'No especificado'}</p>
           <p>⚖️ {client.taxType || 'Sin condición'}</p>
+          <p>📅 Cierre: {client.closeMonth || 'No especificado'}</p>
         </div>
       </div>
 
