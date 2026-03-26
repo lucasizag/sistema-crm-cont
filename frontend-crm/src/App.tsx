@@ -56,7 +56,7 @@ function App() {
         {isAdmin && (
           <>
             <Route path="/asistentes" element={<Asistentes />} />
-            <Route path="/client/:id" element={<ClientDetails />} />
+            <Route path="/client/:id" element={<ClientDetails user={currentUser} />} />           
             <Route path="/calendar" element={<CalendarView />} />
           </>
         )}
