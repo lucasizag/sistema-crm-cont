@@ -14,10 +14,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
   
-  // BLINDAJE: Inicializamos directo con el prop si existe
   const [clientId, setClientId] = useState(propClientId || '');
   
-  // EL CAMBIO ESTÁ ACÁ: createdAt arranca vacío ('')
   const createEmptyRow = () => ({
     id: Date.now(),
     title: '',
@@ -104,6 +102,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     }
   };
 
+  // MAGIA: Buscamos al cliente actual para ver si tiene tareas predeterminadas
+  const activeClientId = propClientId || clientId;
+  const currentClient = clients.find(c => c.id === activeClientId);
+  const availablePredeterminedTasks = currentClient?.predeterminedTasks || [];
+
   if (!isOpen) return null;
 
   return (
@@ -127,6 +130,36 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
         <form onSubmit={handleSubmit} className="space-y-6">
           
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+            
+            {/* NUEVO: SELECTOR MÁGICO DE AUTOCOMPLETADO */}
+            {availablePredeterminedTasks.length > 0 && (
+              <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 mb-4 animate-fade-in shadow-sm">
+                <label className="block text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                  ✨ Autocompletar con Obligación Recurrente
+                </label>
+                <select 
+                  className="w-full rounded-lg border border-indigo-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-indigo-900 font-medium cursor-pointer"
+                  onChange={(e) => {
+                    const idx = e.target.value;
+                    if (idx !== "") {
+                      const pt = availablePredeterminedTasks[idx];
+                      setGeneralTitle(pt.task || '');
+                      if (pt.observations) setDescription(pt.observations);
+                      // Reseteamos el select al valor por defecto para que funcione si lo vuelve a tocar
+                      e.target.value = ""; 
+                    }
+                  }}
+                >
+                  <option value="">-- Tocar para elegir y autocompletar título --</option>
+                  {availablePredeterminedTasks.map((pt: any, idx: number) => (
+                    <option key={idx} value={idx}>
+                      {pt.task} {pt.month && pt.month !== 'Todos los meses' ? `(Mes: ${pt.month})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Título General (Trámite)</label>
