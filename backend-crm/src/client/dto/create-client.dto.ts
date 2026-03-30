@@ -8,4 +8,7 @@ export class CreateClientDto {
   startDate?: string | Date;
   closeMonth?: string;
   dropDate?: string | Date;
+  
+  // --- NUEVO CAMPO ---
+  predeterminedTasks?: any[];
 }

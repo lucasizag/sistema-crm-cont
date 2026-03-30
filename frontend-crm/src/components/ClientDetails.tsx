@@ -8,7 +8,8 @@ import {
   Square, 
   Pencil, 
   AlertTriangle,
-  Eye
+  Eye,
+  ListChecks // <-- Nuevo ícono
 } from 'lucide-react';
 import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
@@ -28,6 +29,7 @@ interface Task {
   assistantDeadline?: string;
 }
 
+// Agregamos las predeterminedTasks a la interfaz del Cliente
 interface Client {
   id: string;
   name: string;
@@ -35,6 +37,7 @@ interface Client {
   taxType: string;
   closeMonth?: string; 
   dropDate?: string;   
+  predeterminedTasks?: { task: string; month: string; observations: string }[]; 
   tasks: Task[];
 }
 
@@ -129,6 +132,34 @@ export default function ClientDetails({ user }: { user: any }) {
           <p>⚖️ {client.taxType || 'Sin condición'}</p>
           <p>📅 Cierre: {client.closeMonth || 'No especificado'}</p>
         </div>
+
+        {/* NUEVA SECCIÓN: TAREAS PREDETERMINADAS DEL CLIENTE */}
+        {client.predeterminedTasks && client.predeterminedTasks.length > 0 && (
+          <div className="mt-6 border-t border-slate-100 pt-5">
+            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <ListChecks className="w-4 h-4 text-indigo-500" /> Tareas Predeterminadas
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {client.predeterminedTasks.map((pt, idx) => (
+                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 hover:shadow-md transition-shadow">
+                  <p className="font-bold text-sm text-slate-800">{pt.task || 'Sin título'}</p>
+                  
+                  {pt.month && (
+                    <p className="text-xs text-indigo-600 font-medium mt-1.5 flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" /> Mes: {pt.month}
+                    </p>
+                  )}
+                  
+                  {pt.observations && (
+                    <p className="text-xs text-slate-500 mt-2 bg-white p-2 rounded-lg border border-slate-100 italic">
+                      "{pt.observations}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -157,7 +188,7 @@ export default function ClientDetails({ user }: { user: any }) {
                     <th className="p-4 text-center">Responsable</th>
                     <th className="p-4 text-center">Asignación</th>
                     <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
-                    <th className="p-4 text-center text-red-600">Vencimiento</th>
+                    <th className="p-4 text-center text-red-600">Venc. Estudio</th>
                     <th className="p-4 text-right">Acciones</th>
                   </tr>
                 </thead>

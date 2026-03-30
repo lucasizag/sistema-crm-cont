@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Building2 } from 'lucide-react'; 
+import { X, Building2, Plus, Trash2, ListChecks } from 'lucide-react'; 
 import api from '../api';
 
 interface Props {
@@ -23,7 +23,6 @@ const MONTHS = [
 
 export default function CreateClientModal({ isOpen, onClose, onSuccess, clientToEdit }: Props) {
   const [loading, setLoading] = useState(false);
-  
   const today = new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
@@ -33,12 +32,16 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
     email: '',
     phone: '',
     startDate: today, 
-    closeMonth: '', // NUEVO: Solo el mes
-    dropDate: '',   // NUEVO: Fecha exacta de baja
+    closeMonth: '', 
+    dropDate: '',   
   });
 
   const [selectedDropdown, setSelectedDropdown] = useState('');
   const [customTaxType, setCustomTaxType] = useState('');
+
+  // ESTADO PARA LAS TAREAS PREDETERMINADAS
+  const createEmptyPtRow = () => ({ id: Date.now(), task: '', month: '', observations: '' });
+  const [ptRows, setPtRows] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -55,7 +58,6 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
         });
 
         const existingTaxType = clientToEdit.taxType;
-        
         if (!existingTaxType) {
           setSelectedDropdown('');
           setCustomTaxType('');
@@ -66,10 +68,19 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
           setSelectedDropdown('Otro');
           setCustomTaxType(existingTaxType);
         }
+
+        // Cargar tareas predeterminadas existentes
+        if (clientToEdit.predeterminedTasks && clientToEdit.predeterminedTasks.length > 0) {
+          setPtRows(clientToEdit.predeterminedTasks.map((pt: any, i: number) => ({ ...pt, id: Date.now() + i })));
+        } else {
+          setPtRows([createEmptyPtRow()]); // Un renglón vacío por defecto
+        }
+
       } else {
         setFormData({ name: '', cuit: '', address: '', email: '', phone: '', startDate: today, closeMonth: '', dropDate: '' });
         setSelectedDropdown('');
         setCustomTaxType('');
+        setPtRows([createEmptyPtRow()]);
       }
     }
   }, [isOpen, clientToEdit, today]);
@@ -85,12 +96,16 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
       finalTaxType = selectedDropdown;
     }
 
+    // Filtramos los renglones vacíos para no guardar basura en la base de datos
+    const validPtRows = ptRows.filter(r => r.task.trim() !== '').map(({ id, ...rest }) => rest);
+
     const payload = {
       ...formData,
       taxType: finalTaxType,
       startDate: formData.startDate || null,
       closeMonth: formData.closeMonth || null,
       dropDate: formData.dropDate || null,
+      predeterminedTasks: validPtRows.length > 0 ? validPtRows : null,
     };
 
     try {
@@ -113,11 +128,18 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // FUNCIONES PARA TAREAS PREDETERMINADAS
+  const addPtRow = () => setPtRows([...ptRows, createEmptyPtRow()]);
+  const removePtRow = (id: number) => setPtRows(ptRows.filter(r => r.id !== id));
+  const updatePtRow = (id: number, field: string, value: string) => {
+    setPtRows(ptRows.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
         
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors">
           <X className="w-5 h-5" />
@@ -137,6 +159,7 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
+          {/* --- INFORMACIÓN BÁSICA --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nombre / Razón Social</label>
@@ -170,14 +193,9 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
 
               {selectedDropdown === 'Otro' && (
                 <div className="animate-fade-in-down">
-                  <label className="block text-sm font-semibold text-indigo-700 mb-1.5">
-                    Especificar otra condición
-                  </label>
+                  <label className="block text-sm font-semibold text-indigo-700 mb-1.5">Especificar otra condición</label>
                   <input
-                    type="text"
-                    value={customTaxType}
-                    onChange={(e) => setCustomTaxType(e.target.value)}
-                    placeholder="Ej: Monotributista Social..."
+                    type="text" value={customTaxType} onChange={(e) => setCustomTaxType(e.target.value)} placeholder="Ej: Monotributista Social..."
                     className="w-full rounded-xl border border-indigo-200 p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-white"
                   />
                 </div>
@@ -201,43 +219,87 @@ export default function CreateClientModal({ isOpen, onClose, onSuccess, clientTo
             <input type="text" name="address" value={formData.address} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none" placeholder="Calle 123, Ciudad, Provincia" />
           </div>
 
-          {/* --- SECCIÓN DE FECHAS (MODIFICADA) --- */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 border-t border-slate-100 mt-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Fecha de Alta
-              </label>
-              <input 
-                type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} 
-                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600" 
-              />
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Fecha de Alta</label>
+              <input type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600" />
             </div>
-            
-            {/* NUEVO: Mes de cierre de ejercicio */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Mes de Cierre <span className="text-slate-400 font-normal">(Ejerc.)</span>
-              </label>
-              <select 
-                name="closeMonth" value={formData.closeMonth} onChange={handleInputChange}
-                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-slate-600 font-medium"
-              >
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mes de Cierre <span className="text-slate-400 font-normal">(Ejerc.)</span></label>
+              <select name="closeMonth" value={formData.closeMonth} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-slate-600 font-medium">
                 <option value="">-- Elegir Mes --</option>
-                {MONTHS.map(mes => (
-                  <option key={mes} value={mes}>{mes}</option>
-                ))}
+                {MONTHS.map(mes => <option key={mes} value={mes}>{mes}</option>)}
               </select>
             </div>
-
-            {/* NUEVO: Fecha de Baja definitiva */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Fecha de Baja <span className="text-slate-400 font-normal">(Cese)</span>
-              </label>
-              <input 
-                type="date" name="dropDate" value={formData.dropDate} onChange={handleInputChange} 
-                className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600" 
-              />
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Fecha de Baja <span className="text-slate-400 font-normal">(Cese)</span></label>
+              <input type="date" name="dropDate" value={formData.dropDate} onChange={handleInputChange} className="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 outline-none text-slate-600" />
+            </div>
+          </div>
+
+          {/* --- NUEVA SECCIÓN: TAREAS PREDETERMINADAS --- */}
+          <div className="pt-6 border-t border-slate-100 mt-6">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <label className="block text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <ListChecks className="w-4 h-4 text-indigo-600" /> 
+                  Tareas Predeterminadas <span className="text-slate-400 font-normal text-xs">(Opcional)</span>
+                </label>
+                <p className="text-[11px] text-slate-500">Obligaciones recurrentes que tiene este cliente.</p>
+              </div>
+              <button type="button" onClick={addPtRow} className="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                <Plus className="w-3.5 h-3.5" /> Agregar renglón
+              </button>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              {ptRows.map((row, index) => (
+                <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-3 rounded-xl border border-slate-200">
+                  <span className="w-6 text-center text-slate-400 font-bold text-sm hidden sm:block mb-2">
+                    {index + 1}.
+                  </span>
+                  
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Tarea / Obligación</label>
+                    <input 
+                      type="text" placeholder="Ej: DDJJ IVA"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
+                      value={row.task} onChange={(e) => updatePtRow(row.id, 'task', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="w-full sm:w-40">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Mes Vencimiento</label>
+                    <select 
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none bg-white text-slate-600"
+                      value={row.month} onChange={(e) => updatePtRow(row.id, 'month', e.target.value)}
+                    >
+                      <option value="">-- Ninguno --</option>
+                      {MONTHS.map(mes => <option key={mes} value={mes}>{mes}</option>)}
+                      <option value="Todos los meses">Todos los meses</option>
+                    </select>
+                  </div>
+
+                  <div className="w-full sm:w-48">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Observaciones</label>
+                    <input 
+                      type="text" placeholder="Ej: Presentar antes del 15"
+                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
+                      value={row.observations} onChange={(e) => updatePtRow(row.id, 'observations', e.target.value)}
+                    />
+                  </div>
+
+                  <button 
+                    type="button" onClick={() => removePtRow(row.id)}
+                    className="p-2 text-slate-300 hover:text-red-500 rounded-lg transition mb-0.5" title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {ptRows.length === 0 && (
+                <p className="text-center text-slate-400 text-xs py-4">No hay tareas predeterminadas. Presiona "Agregar renglón" para crear una.</p>
+              )}
             </div>
           </div>
 

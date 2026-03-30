@@ -23,7 +23,6 @@ export class ClientService {
   findOne(id: string) {
     return this.clientRepo.findOne({ 
       where: { id }, 
-      // Solo cargamos tareas y sus responsables. NO cargamos attachments ni notes aquí para no hacerlo pesado.
       relations: ['tasks', 'tasks.assignedTo'], 
       order: {
         tasks: {
@@ -33,15 +32,11 @@ export class ClientService {
     });
   }
 
-  // --- LOGICA DE ACTUALIZAR ARREGLADA ---
   async update(id: string, updateClientDto: UpdateClientDto) {
-    // 1. Actualizamos en la base de datos
     await this.clientRepo.update(id, updateClientDto);
-    // 2. Devolvemos el cliente actualizado para que el Frontend lo vea
     return this.clientRepo.findOne({ where: { id } });
   }
 
-  // --- LOGICA DE ELIMINAR ARREGLADA ---
   async remove(id: string) {
     const client = await this.clientRepo.findOne({ where: { id } });
     if (!client) {

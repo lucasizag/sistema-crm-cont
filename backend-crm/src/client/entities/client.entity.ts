@@ -16,7 +16,6 @@ export class Client {
   @Column()
   taxType: string;
 
-  // --- NUEVAS COLUMNAS DE CONTACTO ---
   @Column({ nullable: true })
   address: string;
 
@@ -25,7 +24,6 @@ export class Client {
 
   @Column({ nullable: true })
   phone: string;
-  // -----------------------------------
 
   @OneToMany(() => Task, (task) => task.client)
   tasks: Task[];
@@ -34,11 +32,15 @@ export class Client {
   notes: Note[];
 
   @Column({ type: 'date', nullable: true })
-  startDate: Date | null; // Fecha de Alta
+  startDate: Date | null; 
 
   @Column({ nullable: true })
-  closeMonth: string; // Mes de cierre de ejercicio (Ej: 'Diciembre')
+  closeMonth: string; 
 
   @Column({ type: 'date', nullable: true })
-  dropDate: Date | null; // Fecha de baja definitiva del estudio
+  dropDate: Date | null; 
+
+  // --- NUEVA COLUMNA JSON PARA TAREAS PREDETERMINADAS ---
+  @Column({ type: 'json', nullable: true })
+  predeterminedTasks: any; 
 }
