@@ -14,7 +14,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
   const [clients, setClients] = useState<any[]>([]);
   const [assistants, setAssistants] = useState<any[]>([]);
 
-  // Título general solo aplicará a los RENGLONES NUEVOS que agregues desde acá
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
@@ -23,14 +22,25 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   useEffect(() => {
     if (isOpen && task) {
-      setGeneralTitle(''); // Se deja vacío para no duplicar títulos en la tarea original
+      // 1. INGENIERÍA INVERSA: Separamos el título general de la tarea específica
+      let extractedGeneralTitle = '';
+      let extractedRowTitle = task.title || '';
+
+      if (task.title && task.title.includes(' - ')) {
+        const parts = task.title.split(' - ');
+        extractedGeneralTitle = parts[0].trim();
+        // Unimos el resto por si había más guiones en el nombre de la tarea
+        extractedRowTitle = parts.slice(1).join(' - ').trim(); 
+      }
+
+      setGeneralTitle(extractedGeneralTitle);
       setDescription(task.description || '');
       setClientId(task.client?.id || '');
       
-      // Cargamos la tarea original como el primer renglón (isOriginal: true)
+      // Cargamos la tarea original dividida correctamente
       setTaskRows([{
-        id: task.id, // ID real de la base de datos
-        title: task.title || '',
+        id: task.id, 
+        title: extractedRowTitle,
         assignedTo: task.assignedTo?.id || '',
         createdAt: task.createdAt ? task.createdAt.split('T')[0] : '', 
         assistantDeadline: task.assistantDeadline ? task.assistantDeadline.split('T')[0] : '', 
@@ -57,18 +67,17 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   const addRow = () => {
     setTaskRows([...taskRows, {
-      id: Date.now(), // ID temporal para el Frontend
+      id: Date.now(), 
       title: '',
       assignedTo: '',
       createdAt: new Date().toISOString().split('T')[0],
       assistantDeadline: '',
       dueDate: '',
-      isOriginal: false // Es un renglón nuevo a crear
+      isOriginal: false 
     }]);
   };
 
   const removeRow = (idToRemove: string | number) => {
-    // Solo permitimos borrar si NO es la tarea original
     const rowToDelete = taskRows.find(r => r.id === idToRemove);
     if (rowToDelete && !rowToDelete.isOriginal) {
       setTaskRows(taskRows.filter(row => row.id !== idToRemove));
@@ -88,11 +97,13 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     try {
       const promises = taskRows.map(row => {
         
-        // Si es un renglón nuevo y escribiste un "Título General", lo combina.
-        // Si es la tarea original, respeta el título exacto que ya traía.
+        // 2. Al guardar, volvemos a fusionar el Título General con el renglón (para ambos)
         let finalTitle = row.title;
-        if (!row.isOriginal && generalTitle && row.title) finalTitle = `${generalTitle} - ${row.title}`;
-        else if (!row.isOriginal && generalTitle) finalTitle = generalTitle;
+        if (generalTitle && row.title) {
+          finalTitle = `${generalTitle} - ${row.title}`;
+        } else if (generalTitle) {
+          finalTitle = generalTitle;
+        }
 
         const payload = {
           title: finalTitle,
@@ -104,7 +115,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
           dueDate: row.dueDate || null,
         };
 
-        // Si es la original, hacemos un PATCH (actualizar). Si es nueva, un POST (crear)
         if (row.isOriginal) {
           return api.patch(`/task/${row.id}`, payload);
         } else {
@@ -149,7 +159,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Título General (Para renglones nuevos)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Título General (Trámite)</label>
                 <input 
                   type="text" placeholder="Ej: Liquidación IVA" 
                   className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
@@ -248,7 +258,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
                     </select>
                   </div>
 
-                  {/* El botón de eliminar se desactiva si es la tarea original, porque esa se borra desde la tabla */}
                   <button 
                     type="button" onClick={() => removeRow(row.id)} disabled={row.isOriginal}
                     className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-0 transition mb-0.5"
