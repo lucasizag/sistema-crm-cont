@@ -13,41 +13,20 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
 
-  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', dueDate: '' });
+  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', dueDate: '', estimatedHours: '' });
   const [taskRows, setTaskRows] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen && task) {
+      setGeneralTitle(task.title || '');
       setDescription(task.description || '');
       setClientId(task.client?.id || '');
       
-      // ¿Es una tarea con el sistema NUEVO? (Tiene sub-tareas guardadas)
       if (task.subTasks && task.subTasks.length > 0) {
-        setGeneralTitle(task.title || '');
         setTaskRows(task.subTasks);
       } else {
-        // Es una tarea con el sistema VIEJO. Hacemos ingeniería inversa para separarla
-        let extractedGeneralTitle = task.title || '';
-        let extractedRowTitle = task.title || '';
-
-        if (task.title && task.title.includes(' - ')) {
-          const parts = task.title.split(' - ');
-          extractedGeneralTitle = parts[0].trim();
-          // Unimos el resto por si el nombre de la tarea también tenía guiones
-          extractedRowTitle = parts.slice(1).join(' - ').trim(); 
-        }
-
-        setGeneralTitle(extractedGeneralTitle);
-        setTaskRows([{ 
-          id: Date.now(), 
-          title: extractedRowTitle, 
-          assignedTo: task.assignedTo?.id || '', 
-          createdAt: task.createdAt ? task.createdAt.split('T')[0] : '', 
-          assistantDeadline: task.assistantDeadline ? task.assistantDeadline.split('T')[0] : '', 
-          dueDate: task.dueDate ? task.dueDate.split('T')[0] : '' 
-        }]); 
+        setTaskRows([{ ...createEmptyRow(), title: task.title }]); 
       }
-      
       fetchDropdownData();
     }
   }, [isOpen, task]);
@@ -69,7 +48,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     e.preventDefault();
     setLoading(true);
     try {
-      // Un solo PATCH: Actualiza el Padre y guarda la lista de renglones adentro
       await api.patch(`/task/${task.id}`, {
         title: generalTitle || 'Trámite sin título',
         description: description || null,
@@ -86,7 +64,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full"><X className="w-5 h-5" /></button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -129,19 +107,26 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
                     <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-32">
+                  
+                  {/* NUEVO CAMPO HORAS */}
+                  <div className="w-full sm:w-20">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
+                    <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
+                  </div>
+
+                  <div className="w-full sm:w-28">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-32">
+                  <div className="w-full sm:w-28">
                     <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-32">
+                  <div className="w-full sm:w-28">
                     <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Vencimiento</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600" value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-40">
+                  <div className="w-full sm:w-36">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
                     <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
                       <option value="">-- Sin Asignar --</option>

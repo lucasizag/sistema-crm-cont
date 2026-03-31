@@ -12,7 +12,8 @@ import CalendarView from './components/CalendarView';
 import Clientes from './components/Clientes';
 import Asistentes from './components/Asistentes';
 import Tareas from './components/Tareas';
-import PanelAsistente from './components/PanelAsistente'; // <--- IMPORTANTE: Nueva pantalla
+import PanelAsistente from './components/PanelAsistente'; 
+import Horas from './components/Horas'; // <--- IMPORTANTE: Nueva pantalla de Horas importada
 
 function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -51,12 +52,13 @@ function App() {
         {/* --- RUTAS COMPARTIDAS (con filtros internos) --- */}
         <Route path="/tareas" element={<Tareas user={currentUser} />} />
         <Route path="/clientes" element={<Clientes user={currentUser} />} />
+        <Route path="/horas" element={<Horas user={currentUser} />} /> {/* <--- NUEVA RUTA AQUÍ */}
 
         {/* --- RUTAS EXCLUSIVAS PARA ADMIN (KARINA) --- */}
         {isAdmin && (
           <>
             <Route path="/asistentes" element={<Asistentes />} />
-            <Route path="/client/:id" element={<ClientDetails user={currentUser} />} />           
+            <Route path="/client/:id" element={<ClientDetails user={currentUser} />} />          
             <Route path="/calendar" element={<CalendarView />} />
           </>
         )}

@@ -9,7 +9,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState(propClientId || '');
   
-  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', dueDate: '' });
+  // NUEVO: Agregamos estimatedHours al renglón vacío
+  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', dueDate: '', estimatedHours: '' });
   const [taskRows, setTaskRows] = useState([createEmptyRow()]);
 
   const [clients, setClients] = useState<any[]>([]);
@@ -40,13 +41,12 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     e.preventDefault();
     setLoading(true);
     try {
-      // MAGIA: Ahora enviamos UN SOLO POST con el Título General, y todos los renglones van adentro en "subTasks"
       await api.post('/task', {
         title: generalTitle || 'Trámite sin título',
         description: description || null,
         clientId: propClientId || clientId || null,
         status: 'PENDIENTE',
-        subTasks: taskRows, // <--- Acá viajan los hijos
+        subTasks: taskRows,
       });
       onSuccess(); onClose();
     } catch (error) {
@@ -62,7 +62,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full"><X className="w-5 h-5" /></button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -94,7 +94,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Título del Trámite</label>
-                <input type="text" required placeholder="Ej: Liquidación IVA" className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 text-sm" value={generalTitle} onChange={(e) => setGeneralTitle(e.target.value)} />
+                <input type="text" required className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 text-sm" value={generalTitle} onChange={(e) => setGeneralTitle(e.target.value)} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente Asociado</label>
@@ -122,21 +122,28 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                   <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
                   <div className="w-full sm:flex-1">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
-                    <input type="text" required placeholder="Ej: Cargar facturas" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
+                    <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-32">
+                  
+                  {/* NUEVO CAMPO HORAS */}
+                  <div className="w-full sm:w-20">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
+                    <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
+                  </div>
+
+                  <div className="w-full sm:w-28">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-32">
+                  <div className="w-full sm:w-28">
                     <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-32">
+                  <div className="w-full sm:w-28">
                     <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Vencimiento</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600" value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-40">
+                  <div className="w-full sm:w-36">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
                     <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
                       <option value="">-- Sin Asignar --</option>
