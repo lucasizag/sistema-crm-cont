@@ -18,16 +18,36 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   useEffect(() => {
     if (isOpen && task) {
-      setGeneralTitle(task.title || '');
       setDescription(task.description || '');
       setClientId(task.client?.id || '');
       
-      // Cargamos los hijos desde la base de datos (o un renglón vacío si era una tarea vieja)
+      // ¿Es una tarea con el sistema NUEVO? (Tiene sub-tareas guardadas)
       if (task.subTasks && task.subTasks.length > 0) {
+        setGeneralTitle(task.title || '');
         setTaskRows(task.subTasks);
       } else {
-        setTaskRows([{ ...createEmptyRow(), title: task.title }]); 
+        // Es una tarea con el sistema VIEJO. Hacemos ingeniería inversa para separarla
+        let extractedGeneralTitle = task.title || '';
+        let extractedRowTitle = task.title || '';
+
+        if (task.title && task.title.includes(' - ')) {
+          const parts = task.title.split(' - ');
+          extractedGeneralTitle = parts[0].trim();
+          // Unimos el resto por si el nombre de la tarea también tenía guiones
+          extractedRowTitle = parts.slice(1).join(' - ').trim(); 
+        }
+
+        setGeneralTitle(extractedGeneralTitle);
+        setTaskRows([{ 
+          id: Date.now(), 
+          title: extractedRowTitle, 
+          assignedTo: task.assignedTo?.id || '', 
+          createdAt: task.createdAt ? task.createdAt.split('T')[0] : '', 
+          assistantDeadline: task.assistantDeadline ? task.assistantDeadline.split('T')[0] : '', 
+          dueDate: task.dueDate ? task.dueDate.split('T')[0] : '' 
+        }]); 
       }
+      
       fetchDropdownData();
     }
   }, [isOpen, task]);
@@ -49,7 +69,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     e.preventDefault();
     setLoading(true);
     try {
-      // Hacemos UN SOLO PATCH actualizando el Padre y pisando la lista de Hijos
+      // Un solo PATCH: Actualiza el Padre y guarda la lista de renglones adentro
       await api.patch(`/task/${task.id}`, {
         title: generalTitle || 'Trámite sin título',
         description: description || null,
