@@ -84,7 +84,7 @@ export default function Horas({ user }: { user: any }) {
         ) : filteredTasks.length === 0 ? (
           <div className="p-16 text-center">
              <CheckSquare className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-             <p className="text-slate-500 font-medium">No hay sub-tareas activas para auditar.</p>
+             <p className="text-slate-500 font-medium">No hay tareas activas para auditar.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -107,7 +107,8 @@ export default function Horas({ user }: { user: any }) {
                     <tr key={item.subTaskId} className="hover:bg-slate-50 transition">
                       <td className="p-4 align-top">
                         <p className="font-bold text-sm text-slate-800">{item.clientName}</p>
-                        <p className="text-xs text-slate-500 mt-1">{item.mainTitle} <span className="mx-1 text-slate-300">|</span> <span className="text-indigo-600 font-semibold">{item.subTitle}</span></p>
+                        {/* AQUÍ ESTÁ EL CAMBIO: Quitamos el item.subTitle para que solo muestre el Trámite Principal */}
+                        <p className="text-xs text-slate-500 mt-1">{item.mainTitle}</p>
                       </td>
                       <td className="p-4 text-center align-middle">
                         <span className="text-slate-700 text-sm font-medium">{item.assistantName}</span>
