@@ -1,15 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, 
-  Calendar, 
-  Trash2, 
-  CheckSquare, 
-  Square, 
-  Pencil, 
-  AlertTriangle,
-  Eye,
-  ListChecks // <-- Nuevo ícono
+  ArrowLeft, Calendar, Trash2, CheckSquare, Square, Pencil, AlertTriangle, Eye, ListChecks
 } from 'lucide-react';
 import api from '../api';
 import CreateTaskModal from './CreateTaskModal';
@@ -20,16 +12,11 @@ interface Task {
   id: string;
   title: string;
   description?: string;
-  dueDate: string;
   status: string;
-  condition?: string;
-  assignedTo?: { id: string; name: string };
+  subTasks?: any[];
   client?: { id: string; name: string };
-  createdAt?: string;
-  assistantDeadline?: string;
 }
 
-// Agregamos las predeterminedTasks a la interfaz del Cliente
 interface Client {
   id: string;
   name: string;
@@ -77,35 +64,19 @@ export default function ClientDetails({ user }: { user: any }) {
 
   const toggleTaskStatus = async (task: Task) => {
     try {
-      const newStatus = task.status === 'PENDIENTE' ? 'COMPLETADA' : 'PENDIENTE';
+      const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
+      const newStatus = isCompleted ? 'PENDIENTE' : 'COMPLETADA';
       await api.patch(`/task/${task.id}`, { status: newStatus });
       fetchClientData();
     } catch (error) { console.error(error); }
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!confirm('¿Borrar tarea?')) return;
+    if (!confirm('¿Borrar trámite por completo?')) return;
     try { 
       await api.delete(`/task/${taskId}`); 
       fetchClientData(); 
     } catch (error) { console.error(error); }
-  };
-
-  const getDeadlineStyle = (dueDate: string, status: string) => {
-    if (status === 'COMPLETADA') return { color: 'bg-slate-100 text-slate-500 border-slate-200', text: 'Completada' };
-    if (!dueDate) return { color: 'bg-slate-50 text-slate-600', text: 'Sin fecha' };
-    
-    const diffDays = Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (86400000));
-    
-    if (diffDays < 0) return { color: 'bg-red-100 text-red-700 border-red-200 font-bold', text: 'VENCIDA' };
-    if (diffDays <= 3) return { color: 'bg-orange-100 text-orange-700 border-orange-200 font-bold', text: 'Urgente' };
-    return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'A tiempo' };
-  };
-
-  const formatDateSafe = (dateString?: string) => {
-    if (!dateString) return '-';
-    const [year, month, day] = dateString.split('T')[0].split('-');
-    return `${day}/${month}/${year}`;
   };
 
   if (error) return (
@@ -133,7 +104,6 @@ export default function ClientDetails({ user }: { user: any }) {
           <p>📅 Cierre: {client.closeMonth || 'No especificado'}</p>
         </div>
 
-        {/* NUEVA SECCIÓN: TAREAS PREDETERMINADAS DEL CLIENTE */}
         {client.predeterminedTasks && client.predeterminedTasks.length > 0 && (
           <div className="mt-6 border-t border-slate-100 pt-5">
             <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
@@ -143,18 +113,8 @@ export default function ClientDetails({ user }: { user: any }) {
               {client.predeterminedTasks.map((pt, idx) => (
                 <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 hover:shadow-md transition-shadow">
                   <p className="font-bold text-sm text-slate-800">{pt.task || 'Sin título'}</p>
-                  
-                  {pt.month && (
-                    <p className="text-xs text-indigo-600 font-medium mt-1.5 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" /> Mes: {pt.month}
-                    </p>
-                  )}
-                  
-                  {pt.observations && (
-                    <p className="text-xs text-slate-500 mt-2 bg-white p-2 rounded-lg border border-slate-100 italic">
-                      "{pt.observations}"
-                    </p>
-                  )}
+                  {pt.month && <p className="text-xs text-indigo-600 font-medium mt-1.5 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Mes: {pt.month}</p>}
+                  {pt.observations && <p className="text-xs text-slate-500 mt-2 bg-white p-2 rounded-lg border border-slate-100 italic">"{pt.observations}"</p>}
                 </div>
               ))}
             </div>
@@ -165,14 +125,14 @@ export default function ClientDetails({ user }: { user: any }) {
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-indigo-600" /> Control de Tareas
+            <Calendar className="w-5 h-5 text-indigo-600" /> Control de Trámites
           </h2>
           {isAdmin && (
             <button 
               onClick={handleCreateTask} 
               className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm"
             >
-              + Nueva Tarea
+              + Nuevo Trámite
             </button>
           )}
         </div>
@@ -184,71 +144,44 @@ export default function ClientDetails({ user }: { user: any }) {
                 <thead className="bg-slate-50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
                   <tr>
                     <th className="p-4 w-12 text-center"></th>
-                    <th className="p-4">Tarea</th>
-                    <th className="p-4 text-center">Responsable</th>
-                    <th className="p-4 text-center">Asignación</th>
-                    <th className="p-4 text-center text-indigo-600">Deadline Asistente</th>
-                    <th className="p-4 text-center text-red-600">Venc. Estudio</th>
-                    <th className="p-4 text-right">Acciones</th>
+                    <th className="p-4">Trámite / Tarea</th>
+                    {isAdmin && <th className="p-4 text-right">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {client.tasks.map(task => {
-                    const urgency = getDeadlineStyle(task.dueDate, task.status);
+                    const isCompleted = task.status === 'COMPLETADA' || task.status === 'completed';
 
                     return (
                       <tr key={task.id} className="hover:bg-slate-50 transition">
                         
-                        <td className="p-4 text-center align-top pt-5">
-                          <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${task.status === 'COMPLETADA' ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
-                            {task.status === 'COMPLETADA' ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
+                        <td className="p-4 text-center align-middle">
+                          <button onClick={() => toggleTaskStatus(task)} className={`transition-colors ${isCompleted ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-indigo-500'}`}>
+                            {isCompleted ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
                           </button>
                         </td>
 
-                        <td className="p-4 align-top">
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className={`font-bold text-sm ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                              {task.title}
-                            </p>
-                          </div>
-                          {task.status !== 'COMPLETADA' && <span className={`text-[10px] px-2 py-0.5 rounded border mt-2 inline-block ${urgency.color}`}>{urgency.text}</span>}
-                        </td>
-
-                        <td className="p-4 text-center align-top pt-5">
-                          {task.assignedTo ? (
-                            <span className="text-slate-700 text-sm font-semibold">
-                              {task.assignedTo.name}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs font-medium bg-slate-50 px-3 py-1 rounded-full border border-slate-200">Sin asignar</span>
-                          )}
-                        </td>
-
-                        <td className="p-4 text-center text-sm font-medium text-slate-500 align-top pt-5">
-                          {formatDateSafe(task.createdAt)}
-                        </td>
-
-                        <td className="p-4 text-center text-sm font-bold text-indigo-600 align-top pt-5 bg-indigo-50/30">
-                          {formatDateSafe(task.assistantDeadline)}
-                        </td>
-
-                        <td className="p-4 text-sm font-bold text-red-600 align-top pt-5 text-center">
-                          {formatDateSafe(task.dueDate)}
+                        <td className="p-4 align-middle">
+                          <p className={`font-bold text-sm ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                            {task.title}
+                          </p>
                         </td>
                         
-                        <td className="p-4 text-right align-top pt-4">
-                          <div className="flex justify-end gap-1">
-                            <button onClick={() => setViewingTask(task)} className="text-slate-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm" title="Ver Detalles">
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleEditTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => deleteTask(task.id)} className="text-slate-400 hover:text-red-600 bg-white hover:bg-red-50 p-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all shadow-sm" title="Eliminar">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                        {isAdmin && (
+                          <td className="p-4 text-right align-middle">
+                            <div className="flex justify-end gap-1">
+                              <button onClick={() => setViewingTask(task)} className="text-slate-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm" title="Ver Detalles">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleEditTask(task)} className="text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 p-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-all shadow-sm" title="Editar">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => deleteTask(task.id)} className="text-slate-400 hover:text-red-600 bg-white hover:bg-red-50 p-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all shadow-sm" title="Eliminar">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -258,34 +191,15 @@ export default function ClientDetails({ user }: { user: any }) {
           ) : (
             <div className="p-12 text-center">
               <CheckSquare className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No hay tareas creadas para este cliente.</p>
+              <p className="text-slate-500 font-medium">No hay trámites creados para este cliente.</p>
             </div>
           )}
         </div>
       </div>
 
-      <CreateTaskModal 
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchClientData} 
-        clientId={client.id}
-      />
-
-      <EditTaskModal 
-        isOpen={!!editingTask} 
-        onClose={() => setEditingTask(null)} 
-        onSuccess={() => {
-          setEditingTask(null);
-          fetchClientData();
-        }} 
-        task={editingTask}
-      />
-
-      <ViewTaskModal 
-        isOpen={!!viewingTask} 
-        onClose={() => setViewingTask(null)} 
-        task={viewingTask} 
-      />
+      <CreateTaskModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSuccess={fetchClientData} clientId={client.id} />
+      <EditTaskModal isOpen={!!editingTask} onClose={() => setEditingTask(null)} onSuccess={() => { setEditingTask(null); fetchClientData(); }} task={editingTask} />
+      <ViewTaskModal isOpen={!!viewingTask} onClose={() => setViewingTask(null)} task={viewingTask} />
     </div>
   );
 }
