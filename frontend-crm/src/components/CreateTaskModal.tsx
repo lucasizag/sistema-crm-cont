@@ -2,29 +2,14 @@ import { useEffect, useState } from 'react';
 import { X, Plus, Trash2, ListChecks } from 'lucide-react';
 import api from '../api';
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  clientId?: string; 
-  taskToEdit?: any;
-}
+interface Props { isOpen: boolean; onClose: () => void; onSuccess: () => void; clientId?: string; taskToEdit?: any; }
 
 export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: propClientId }: Props) {
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
-  
   const [clientId, setClientId] = useState(propClientId || '');
   
-  const createEmptyRow = () => ({
-    id: Date.now(),
-    title: '',
-    assignedTo: '',
-    createdAt: '', 
-    assistantDeadline: '',
-    dueDate: '',
-  });
-
+  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', dueDate: '' });
   const [taskRows, setTaskRows] = useState([createEmptyRow()]);
 
   const [clients, setClients] = useState<any[]>([]);
@@ -33,76 +18,42 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
   useEffect(() => {
     if (isOpen) {
-      setGeneralTitle('');
-      setDescription('');
-      setClientId(propClientId || ''); 
-      setTaskRows([createEmptyRow()]);
+      setGeneralTitle(''); setDescription(''); setClientId(propClientId || ''); setTaskRows([createEmptyRow()]);
       fetchDropdownData();
     }
   }, [isOpen, propClientId]); 
 
   const fetchDropdownData = async () => {
     try {
-      const [clientsRes, assistantsRes] = await Promise.all([
-        api.get('/client'),
-        api.get('/user')
-      ]);
-      setClients(clientsRes.data);
-      setAssistants(assistantsRes.data);
-    } catch (error) {
-      console.error("Error cargando listas:", error);
-    }
+      const [clientsRes, assistantsRes] = await Promise.all([api.get('/client'), api.get('/user')]);
+      setClients(clientsRes.data); setAssistants(assistantsRes.data);
+    } catch (error) { console.error("Error cargando listas:", error); }
   };
 
   const addRow = () => setTaskRows([...taskRows, createEmptyRow()]);
-
-  const removeRow = (idToRemove: number) => {
-    if (taskRows.length > 1) {
-      setTaskRows(taskRows.filter(row => row.id !== idToRemove));
-    }
-  };
-
+  const removeRow = (id: number) => { if (taskRows.length > 1) setTaskRows(taskRows.filter(row => row.id !== id)); };
   const updateRow = (id: number, field: string, value: string) => {
-    setTaskRows(taskRows.map(row => 
-      row.id === id ? { ...row, [field]: value } : row
-    ));
+    setTaskRows(taskRows.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const promises = taskRows.map(row => {
-        let finalTitle = 'Tarea sin título';
-        if (generalTitle && row.title) finalTitle = `${generalTitle} - ${row.title}`;
-        else if (generalTitle) finalTitle = generalTitle;
-        else if (row.title) finalTitle = row.title;
-
-        return api.post('/task', {
-          title: finalTitle,
-          description: description || null,
-          clientId: propClientId || clientId || null,
-          assignedToId: row.assignedTo || null,
-          createdAt: row.createdAt || null, 
-          dueDate: row.dueDate || null,
-          assistantDeadline: row.assistantDeadline || null
-        });
+      // MAGIA: Ahora enviamos UN SOLO POST con el Título General, y todos los renglones van adentro en "subTasks"
+      await api.post('/task', {
+        title: generalTitle || 'Trámite sin título',
+        description: description || null,
+        clientId: propClientId || clientId || null,
+        status: 'PENDIENTE',
+        subTasks: taskRows, // <--- Acá viajan los hijos
       });
-
-      await Promise.all(promises);
-      
-      onSuccess();
-      onClose();
+      onSuccess(); onClose();
     } catch (error) {
-      console.error(error);
       alert('Hubo un error al guardar las tareas.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  // MAGIA: Buscamos al cliente actual para ver si tiene tareas predeterminadas
   const activeClientId = propClientId || clientId;
   const currentClient = clients.find(c => c.id === activeClientId);
   const availablePredeterminedTasks = currentClient?.predeterminedTasks || [];
@@ -112,49 +63,29 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
       <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full">
-          <X className="w-5 h-5" />
-        </button>
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full"><X className="w-5 h-5" /></button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600">
-            <ListChecks className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">Cargar Tareas / Trámite</h2>
-            <p className="text-sm text-slate-500">Agrupa varias acciones para un cliente.</p>
-          </div>
+          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600"><ListChecks className="w-6 h-6" /></div>
+          <div><h2 className="text-xl font-bold text-slate-800">Cargar Trámite General</h2><p className="text-sm text-slate-500">Crea el Trámite y agrégale sus sub-tareas.</p></div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
             
-            {/* NUEVO: SELECTOR MÁGICO DE AUTOCOMPLETADO */}
             {availablePredeterminedTasks.length > 0 && (
               <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 mb-4 animate-fade-in shadow-sm">
-                <label className="block text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                  ✨ Autocompletar con Obligación Recurrente
-                </label>
+                <label className="block text-sm font-bold text-indigo-800 mb-2">✨ Autocompletar con Obligación Recurrente</label>
                 <select 
                   className="w-full rounded-lg border border-indigo-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-indigo-900 font-medium cursor-pointer"
                   onChange={(e) => {
-                    const idx = e.target.value;
-                    if (idx !== "") {
-                      const pt = availablePredeterminedTasks[idx];
-                      setGeneralTitle(pt.task || '');
-                      if (pt.observations) setDescription(pt.observations);
-                      // Reseteamos el select al valor por defecto para que funcione si lo vuelve a tocar
-                      e.target.value = ""; 
-                    }
+                    const pt = availablePredeterminedTasks[e.target.value as any];
+                    if (pt) { setGeneralTitle(pt.task || ''); if (pt.observations) setDescription(pt.observations); e.target.value = ""; }
                   }}
                 >
                   <option value="">-- Tocar para elegir y autocompletar título --</option>
                   {availablePredeterminedTasks.map((pt: any, idx: number) => (
-                    <option key={idx} value={idx}>
-                      {pt.task} {pt.month && pt.month !== 'Todos los meses' ? `(Mes: ${pt.month})` : ''}
-                    </option>
+                    <option key={idx} value={idx}>{pt.task} {pt.month && pt.month !== 'Todos los meses' ? `(Mes: ${pt.month})` : ''}</option>
                   ))}
                 </select>
               </div>
@@ -162,127 +93,66 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Título General (Trámite)</label>
-                <input 
-                  type="text" placeholder="Ej: Liquidación IVA" 
-                  className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
-                  value={generalTitle} onChange={(e) => setGeneralTitle(e.target.value)}
-                />
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Título del Trámite</label>
+                <input type="text" required placeholder="Ej: Liquidación IVA" className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 text-sm" value={generalTitle} onChange={(e) => setGeneralTitle(e.target.value)} />
               </div>
-              
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente Asociado</label>
-                <select 
-                  disabled={!!propClientId} 
-                  className={`block w-full rounded-xl border p-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors ${
-                    propClientId ? 'bg-slate-200 border-slate-300 text-slate-700 font-bold cursor-not-allowed opacity-100' : 'bg-white border-slate-200'
-                  }`}
-                  value={propClientId || clientId} 
-                  onChange={(e) => setClientId(e.target.value)}
-                >
+                <select disabled={!!propClientId} className="block w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-indigo-500 bg-white" value={propClientId || clientId} onChange={(e) => setClientId(e.target.value)}>
                   <option value="">-- Sin Cliente Específico --</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
             </div>
-            
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción / Notas</label>
-              <textarea 
-                rows={2} placeholder="Detalles que aplican a todas las tareas..."
-                className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-sm"
-                value={description} onChange={(e) => setDescription(e.target.value)}
-              />
+              <textarea rows={2} className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-bold text-slate-800">Tareas Específicas a realizar</label>
-              <button 
-                type="button" onClick={addRow}
-                className="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
-              >
-                <Plus className="w-4 h-4" /> Agregar renglón
-              </button>
+              <label className="block text-sm font-bold text-slate-800">Sub-tareas (Renglones)</label>
+              <button type="button" onClick={addRow} className="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1"><Plus className="w-4 h-4" /> Agregar renglón</button>
             </div>
 
             <div className="space-y-4">
               {taskRows.map((row, index) => (
-                <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-4 sm:p-2 rounded-xl border border-slate-200 group">
-                  
-                  <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">
-                    {index + 1}.
-                  </span>
-                  
+                <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-4 sm:p-2 rounded-xl border border-slate-200">
+                  <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
                   <div className="w-full sm:flex-1">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Nombre Tarea</label>
-                    <input 
-                      type="text" placeholder="Ej: Cargar comprobantes"
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
-                      value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)}
-                    />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
+                    <input type="text" required placeholder="Ej: Cargar facturas" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
                   </div>
-                  
                   <div className="w-full sm:w-32">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
-                    <input 
-                      type="date"
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none bg-slate-50"
-                      value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)}
-                    />
+                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
                   </div>
-
                   <div className="w-full sm:w-32">
-                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asist.</label>
-                    <input 
-                      type="date"
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none bg-indigo-50/30"
-                      value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)}
-                    />
+                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline</label>
+                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
                   </div>
-
                   <div className="w-full sm:w-32">
                     <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Vencimiento</label>
-                    <input 
-                      type="date"
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 focus:border-indigo-500 outline-none"
-                      value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)}
-                    />
+                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600" value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)} />
                   </div>
-
                   <div className="w-full sm:w-40">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
-                    <select 
-                      className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none"
-                      value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}
-                    >
+                    <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
                       <option value="">-- Sin Asignar --</option>
                       {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </div>
-
-                  <button 
-                    type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1}
-                    className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 transition mb-0.5"
-                    title="Eliminar renglón"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <button type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1} className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 mb-0.5"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="pt-4 flex gap-3 border-t border-slate-100">
-            <button type="button" onClick={onClose} className="w-1/4 bg-white border border-slate-200 py-3 rounded-xl hover:bg-slate-50 font-medium text-sm">
-              Cancelar
-            </button>
-            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 font-medium text-sm flex justify-center shadow-sm">
-              {loading ? 'Guardando...' : `Guardar ${taskRows.length} Tarea(s)`}
-            </button>
+            <button type="button" onClick={onClose} className="w-1/4 bg-white border border-slate-200 py-3 rounded-xl hover:bg-slate-50 text-sm">Cancelar</button>
+            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-sm">{loading ? 'Guardando...' : `Guardar Trámite (${taskRows.length} sub-tareas)`}</button>
           </div>
-
         </form>
       </div>
     </div>

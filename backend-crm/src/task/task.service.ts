@@ -18,6 +18,7 @@ export class TaskService {
       createdAt: createTaskDto.createdAt ? new Date(createTaskDto.createdAt) : new Date(), // <--- ESTA LÍNEA NUEVA
       status: createTaskDto.status || 'PENDIENTE',
       comment: createTaskDto.comment,
+      subTasks: createTaskDto.subTasks || [],
     });
 
     // 2. Atrapamos el ID directamente (SIN intentar buscar el objeto)

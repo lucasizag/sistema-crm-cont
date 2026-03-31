@@ -34,6 +34,9 @@ export class Task {
   @Column({ nullable: true })
   comment: string;
 
+  @Column({ type: 'json', nullable: true })
+  subTasks: any;
+
   @ManyToOne(() => Client, (client) => client.tasks)
   client: Client;
 

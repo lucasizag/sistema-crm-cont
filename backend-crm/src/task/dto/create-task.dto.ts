@@ -11,4 +11,6 @@ export class CreateTaskDto {
   clientId?: string;
   assignedToId?: string;
   condition?: string;
+
+  subTasks?: any[];
 }
