@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCircle, CheckSquare, Briefcase, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, CheckSquare, Briefcase, LogOut, Clock } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +16,7 @@ export default function Layout({ children, user, onLogout }: LayoutProps) {
     // Solo mostramos asistentes en el menú si es admin
     ...(user.role === 'admin' ? [{ path: '/asistentes', name: 'Asistentes', icon: UserCircle }] : []),
     { path: '/tareas', name: 'Tareas', icon: CheckSquare },
+    { path: '/horas', name: 'Horas', icon: Clock }, // <--- NUEVO MÓDULO AGREGADO AQUÍ
   ];
 
   return (
@@ -78,7 +79,7 @@ export default function Layout({ children, user, onLogout }: LayoutProps) {
       </main>
 
       {/* NAVBAR MÓVIL */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around items-center p-2 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around items-center p-2 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
