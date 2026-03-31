@@ -15,17 +15,15 @@ export class TaskService {
       description: createTaskDto.description, 
       dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : null,
       assistantDeadline: createTaskDto.assistantDeadline ? new Date(createTaskDto.assistantDeadline) : null,
-      createdAt: createTaskDto.createdAt ? new Date(createTaskDto.createdAt) : new Date(), // <--- ESTA LÍNEA NUEVA
+      createdAt: createTaskDto.createdAt ? new Date(createTaskDto.createdAt) : new Date(),
       status: createTaskDto.status || 'PENDIENTE',
       comment: createTaskDto.comment,
-      subTasks: createTaskDto.subTasks || [],
+      subTasks: createTaskDto.subTasks || [], // Guarda los hijos al crear
     });
 
-    // 2. Atrapamos el ID directamente (SIN intentar buscar el objeto)
     const clientId = createTaskDto.clientId;
     const assignedToId = createTaskDto.assignedToId;
 
-    // 3. Inyectamos las relaciones
     if (clientId) newTask.client = { id: clientId } as any;
     if (assignedToId) newTask.assignedTo = { id: assignedToId } as any;
 
@@ -54,12 +52,21 @@ export class TaskService {
     if (updateTaskDto.description !== undefined) task.description = updateTaskDto.description;
     if (updateTaskDto.status) task.status = updateTaskDto.status;
     
+    // --- AQUÍ ESTÁ LA SOLUCIÓN: Le decimos que guarde los renglones ---
+    if (updateTaskDto.subTasks !== undefined) {
+      task.subTasks = updateTaskDto.subTasks;
+    }
+    // ------------------------------------------------------------------
+
     // Guardado seguro de fechas (acepta null si el usuario decide borrarla)
     if (updateTaskDto.dueDate !== undefined) {
       task.dueDate = updateTaskDto.dueDate ? new Date(updateTaskDto.dueDate) : null;
     }
     if (updateTaskDto.assistantDeadline !== undefined) {
       task.assistantDeadline = updateTaskDto.assistantDeadline ? new Date(updateTaskDto.assistantDeadline) : null;
+    }
+    if (updateTaskDto.createdAt !== undefined) {
+      task.createdAt = updateTaskDto.createdAt ? new Date(updateTaskDto.createdAt) : null;
     }
 
     if (updateTaskDto.comment !== undefined) task.comment = updateTaskDto.comment;
