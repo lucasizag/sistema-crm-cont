@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Briefcase, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { X, Briefcase, Filter, ArrowUpDown } from 'lucide-react';
 import api from '../api';
 
 interface Props {
