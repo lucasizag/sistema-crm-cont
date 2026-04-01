@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
-import { Pencil, Trash2, Search } from 'lucide-react';
+import { Pencil, Trash2, Search, Briefcase } from 'lucide-react';
 import CreateAssistantModal from './CreateAssistantModal';
+import AssistantTasksModal from './AssistantTasksModal'; // <--- IMPORTAMOS EL NUEVO MODAL
 
 export default function AssistantList() {
   const [assistants, setAssistants] = useState<any[]>([]);
@@ -10,6 +11,9 @@ export default function AssistantList() {
   const [editingAssistant, setEditingAssistant] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ESTADO PARA EL NUEVO MODAL DEL MALETÍN
+  const [viewingTasksAssistant, setViewingTasksAssistant] = useState(null);
+
   useEffect(() => {
     fetchAssistants();
   }, []);
@@ -17,7 +21,7 @@ export default function AssistantList() {
   const fetchAssistants = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/user'); // Asumimos ruta /user
+      const response = await api.get('/user'); 
       setAssistants(response.data);
     } catch (error) {
       console.error("Error cargando asistentes:", error);
@@ -71,18 +75,41 @@ export default function AssistantList() {
               <tr><td colSpan={4} className="p-8 text-center text-slate-500">No hay asistentes registrados.</td></tr>
             ) : (
               filteredAssistants.map((assistant) => (
-                <tr key={assistant.id} className="hover:bg-slate-50 group">
+                <tr key={assistant.id} className="hover:bg-slate-50 group transition-colors">
                   <td className="px-6 py-4 font-medium">{assistant.name}</td>
                   <td className="px-6 py-4 text-slate-500">{assistant.email}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${assistant.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`px-2 py-1 text-xs font-bold rounded-full border ${assistant.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                       {assistant.role === 'admin' ? 'Administrador' : 'Asistente'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingAssistant(assistant); setIsModalOpen(true); }} className="p-2 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(assistant.id, assistant.name)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                      
+                      {/* BOTÓN DEL MALETÍN MAGICO */}
+                      <button 
+                        onClick={() => setViewingTasksAssistant(assistant)} 
+                        className="p-2 bg-white hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 border border-transparent hover:border-emerald-100 rounded-lg shadow-sm transition-all"
+                        title="Ver Maletín de Trabajo"
+                      >
+                        <Briefcase className="w-4 h-4" />
+                      </button>
+
+                      <button 
+                        onClick={() => { setEditingAssistant(assistant); setIsModalOpen(true); }} 
+                        className="p-2 bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 border border-transparent hover:border-indigo-100 rounded-lg shadow-sm transition-all"
+                        title="Editar Perfil"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      
+                      <button 
+                        onClick={() => handleDelete(assistant.id, assistant.name)} 
+                        className="p-2 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 border border-transparent hover:border-red-100 rounded-lg shadow-sm transition-all"
+                        title="Eliminar Acceso"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -93,6 +120,14 @@ export default function AssistantList() {
       </div>
 
       <CreateAssistantModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchAssistants} assistantToEdit={editingAssistant} />
+      
+      {/* RENDERIZAMOS EL MODAL NUEVO AQUÍ ABAJO */}
+      <AssistantTasksModal 
+        isOpen={!!viewingTasksAssistant} 
+        onClose={() => setViewingTasksAssistant(null)} 
+        assistant={viewingTasksAssistant} 
+      />
+      
     </div>
   );
 }
