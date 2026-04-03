@@ -10,7 +10,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
   const [parentDueDate, setParentDueDate] = useState('');
   const [clientId, setClientId] = useState(propClientId || '');
   
-  // Agregamos 'comment' y 'showCommentField' (este último solo para la UI)
   const createEmptyRow = () => ({ 
     id: Date.now(), 
     title: '', 
@@ -52,7 +51,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     e.preventDefault();
     setLoading(true);
     try {
-      // Limpiamos el campo auxiliar 'showCommentField' antes de mandar al backend
       const cleanSubTasks = taskRows.map(({ showCommentField, ...rest }) => rest);
 
       await api.post('/task', {
@@ -69,6 +67,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     } finally { setLoading(false); }
   };
 
+  // MAGIA RECUPERADA: Lógica de tareas predeterminadas
+  const activeClientId = propClientId || clientId;
+  const currentClient = clients.find(c => c.id === activeClientId);
+  const availablePredeterminedTasks = currentClient?.predeterminedTasks || [];
+
   if (!isOpen) return null;
 
   return (
@@ -83,6 +86,26 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+            
+            {/* BLOQUE DE AUTOCOMPLETADO RECUPERADO */}
+            {availablePredeterminedTasks.length > 0 && (
+              <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 mb-4 animate-fade-in shadow-sm">
+                <label className="block text-sm font-bold text-indigo-800 mb-2">✨ Autocompletar con Obligación Recurrente</label>
+                <select 
+                  className="w-full rounded-lg border border-indigo-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-indigo-900 font-medium cursor-pointer"
+                  onChange={(e) => {
+                    const pt = availablePredeterminedTasks[e.target.value as any];
+                    if (pt) { setGeneralTitle(pt.task || ''); if (pt.observations) setDescription(pt.observations); e.target.value = ""; }
+                  }}
+                >
+                  <option value="">-- Tocar para elegir y autocompletar título --</option>
+                  {availablePredeterminedTasks.map((pt: any, idx: number) => (
+                    <option key={idx} value={idx}>{pt.task} {pt.month && pt.month !== 'Todos los meses' ? `(Mes: ${pt.month})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Título del Trámite</label>
@@ -104,9 +127,10 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
               </div>
               <div>
                 <label className="block text-sm font-bold text-red-500 mb-1">Fecha de Vencimiento</label>
-                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 text-sm h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
+                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200 text-sm text-slate-700 outline-none transition-all h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
               </div>
             </div>
+
           </div>
 
           <div>
@@ -183,7 +207,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
           <div className="pt-4 flex gap-3 border-t border-slate-100">
             <button type="button" onClick={onClose} className="w-1/4 bg-white border border-slate-200 py-3 rounded-xl hover:bg-slate-50 text-sm">Cancelar</button>
-            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-sm">{loading ? 'Guardando...' : `Guardar Trámite`}</button>
+            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-sm">{loading ? 'Guardando...' : `Guardar Trámite (${taskRows.length} sub-tareas)`}</button>
           </div>
         </form>
       </div>
