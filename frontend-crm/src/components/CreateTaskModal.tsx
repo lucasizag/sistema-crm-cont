@@ -6,11 +6,12 @@ interface Props { isOpen: boolean; onClose: () => void; onSuccess: () => void; c
 
 export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: propClientId }: Props) {
   const [generalTitle, setGeneralTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(''); // Visualmente ahora se llama "Tarea"
+  const [parentDueDate, setParentDueDate] = useState(''); // NUEVO: Fecha de vencimiento general
   const [clientId, setClientId] = useState(propClientId || '');
   
-  // NUEVO: Agregamos estimatedHours al renglón vacío
-  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', dueDate: '', estimatedHours: '' });
+  // Ya no tiene dueDate en el renglón
+  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', estimatedHours: '' });
   const [taskRows, setTaskRows] = useState([createEmptyRow()]);
 
   const [clients, setClients] = useState<any[]>([]);
@@ -19,7 +20,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
   useEffect(() => {
     if (isOpen) {
-      setGeneralTitle(''); setDescription(''); setClientId(propClientId || ''); setTaskRows([createEmptyRow()]);
+      setGeneralTitle(''); setDescription(''); setParentDueDate(''); setClientId(propClientId || ''); setTaskRows([createEmptyRow()]);
       fetchDropdownData();
     }
   }, [isOpen, propClientId]); 
@@ -44,6 +45,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
       await api.post('/task', {
         title: generalTitle || 'Trámite sin título',
         description: description || null,
+        dueDate: parentDueDate || null, // Mandamos la fecha general al backend
         clientId: propClientId || clientId || null,
         status: 'PENDIENTE',
         subTasks: taskRows,
@@ -104,10 +106,18 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
                 </select>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción / Notas</label>
-              <textarea rows={2} className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Tarea (Detalles / Notas)</label>
+                <textarea rows={2} placeholder="Descripción de la tarea general..." className="block w-full rounded-xl border-slate-200 border p-2.5 bg-white focus:border-indigo-500 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-red-500 mb-1">Fecha de Vencimiento</label>
+                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200 text-sm text-slate-700 outline-none transition-all h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
+              </div>
             </div>
+
           </div>
 
           <div>
@@ -120,36 +130,35 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
               {taskRows.map((row, index) => (
                 <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-4 sm:p-2 rounded-xl border border-slate-200">
                   <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
+                  
                   <div className="w-full sm:flex-1">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
                     <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
                   </div>
                   
-                  {/* NUEVO CAMPO HORAS */}
-                  <div className="w-full sm:w-20">
+                  <div className="w-full sm:w-24">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
                     <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
                   </div>
 
-                  <div className="w-full sm:w-28">
+                  <div className="w-full sm:w-36">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-28">
-                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline</label>
+
+                  <div className="w-full sm:w-36">
+                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asistente</label>
                     <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
                   </div>
-                  <div className="w-full sm:w-28">
-                    <label className="block text-[10px] font-bold text-red-500 uppercase mb-1 ml-1">Vencimiento</label>
-                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600" value={row.dueDate} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)} />
-                  </div>
-                  <div className="w-full sm:w-36">
+
+                  <div className="w-full sm:w-48">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
                     <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
                       <option value="">-- Sin Asignar --</option>
                       {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </div>
+
                   <button type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1} className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 mb-0.5"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
