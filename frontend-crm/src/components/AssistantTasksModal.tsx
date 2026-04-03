@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Briefcase, Filter, ArrowUpDown } from 'lucide-react';
+import { X, Briefcase, Filter, ArrowUpDown, Printer } from 'lucide-react';
 import api from '../api';
 
 interface Props {
@@ -33,12 +33,10 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
       const extractedTasks: any[] = [];
 
       allTasks.forEach((parentTask: any) => {
-        // Ignoramos las tareas completadas enteras
         if (parentTask.status === 'COMPLETADA' || parentTask.status === 'completed') return;
         if (!parentTask.subTasks || parentTask.subTasks.length === 0) return;
 
         parentTask.subTasks.forEach((subTask: any) => {
-          // Si el renglón está asignado a este asistente, lo guardamos
           if (subTask.assignedTo === assistant.id) {
             extractedTasks.push({
               id: subTask.id || Math.random(),
@@ -46,8 +44,8 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
               clientId: parentTask.client?.id || 'general',
               mainTitle: parentTask.title,
               subTitle: subTask.title,
-              createdAt: subTask.createdAt || '1970-01-01', // Fecha asignada
-              deadline: subTask.assistantDeadline || subTask.dueDate || '2099-12-31' // Fecha de cierre
+              createdAt: subTask.createdAt || '1970-01-01', 
+              deadline: subTask.assistantDeadline || subTask.dueDate || '2099-12-31' 
             });
           }
         });
@@ -63,12 +61,10 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
 
   if (!isOpen || !assistant) return null;
 
-  // 1. Filtrar por cliente
   const filteredTasks = tasks.filter(task => 
     filterClient === "" || task.clientId === filterClient
   );
 
-  // 2. Ordenar por fecha
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     const dateAAssigned = new Date(a.createdAt).getTime();
     const dateBAssigned = new Date(b.createdAt).getTime();
@@ -82,7 +78,6 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
     return 0;
   });
 
-  // Extraer clientes únicos para el select
   const uniqueClients = Array.from(new Map(tasks.map(t => [t.clientId, { id: t.clientId, name: t.clientName }])).values());
 
   const formatDate = (dateString: string) => {
@@ -92,15 +87,29 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-hidden flex flex-col">
+    // Las clases print: hacen que al imprimir, el modal ocupe toda la pantalla blanca
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in print:absolute print:inset-0 print:bg-white print:p-0 print:block">
+      
+      <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:w-full print:max-w-none print:h-auto print:overflow-visible print:p-8">
         
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 p-2 rounded-full z-10">
-          <X className="w-5 h-5" />
-        </button>
+        {/* BOTONES SUPERIORES (Se ocultan al imprimir con print:hidden) */}
+        <div className="absolute top-4 right-4 flex gap-2 z-10 print:hidden">
+          <button 
+            onClick={() => window.print()} 
+            className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 bg-white hover:bg-indigo-50 border border-slate-200 px-3 py-1.5 rounded-xl transition-all shadow-sm font-medium text-sm"
+            title="Imprimir o Guardar como PDF"
+          >
+            <Printer className="w-4 h-4" />
+            <span className="hidden sm:inline">Imprimir / PDF</span>
+          </button>
+          
+          <button onClick={onClose} className="text-slate-400 hover:bg-slate-100 p-2 rounded-full">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         <div className="flex items-center gap-3 mb-6 shrink-0">
-          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600">
+          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600 print:border print:border-indigo-200">
             <Briefcase className="w-6 h-6" />
           </div>
           <div>
@@ -109,8 +118,8 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
           </div>
         </div>
 
-        {/* BARRA DE FILTROS */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 flex flex-wrap gap-4 shrink-0">
+        {/* BARRA DE FILTROS (Se oculta al imprimir con print:hidden) */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 flex flex-wrap gap-4 shrink-0 print:hidden">
           <div className="flex-1 min-w-[200px]">
             <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" /> Cliente
@@ -144,42 +153,42 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
           </div>
         </div>
 
-        {/* TABLA DE RESULTADOS */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-y-auto flex-1 min-h-[300px]">
+        {/* TABLA DE RESULTADOS (print:overflow-visible para que muestre todas las hojas si es muy larga) */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-y-auto flex-1 min-h-[300px] print:overflow-visible print:border-none print:shadow-none">
           {isLoading ? (
-            <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>
+            <div className="flex justify-center py-20 print:hidden"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>
           ) : sortedTasks.length === 0 ? (
             <div className="p-16 text-center">
               <Briefcase className="w-12 h-12 text-slate-200 mx-auto mb-3" />
               <p className="text-slate-500 font-medium">Este asistente no tiene tareas activas.</p>
             </div>
           ) : (
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200 sticky top-0">
+            <table className="w-full text-left print:text-sm">
+              <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200 sticky top-0 print:static print:bg-transparent print:border-b-2 print:border-slate-800 print:text-slate-800">
                 <tr>
                   <th className="p-4">Cliente</th>
                   <th className="p-4">Trámite / Tarea</th>
                   <th className="p-4 text-center">Fecha Asignada</th>
-                  <th className="p-4 text-center text-indigo-600">Fecha Cierre</th>
+                  <th className="p-4 text-center text-indigo-600 print:text-slate-800">Fecha Cierre</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 print:divide-slate-300">
                 {sortedTasks.map((task, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition">
+                  <tr key={idx} className="hover:bg-slate-50 transition print:break-inside-avoid">
                     <td className="p-4 align-top">
                       <span className="font-bold text-sm text-slate-800">{task.clientName}</span>
                     </td>
                     <td className="p-4 align-top">
-                      <p className="text-xs text-slate-500 mb-0.5">{task.mainTitle}</p>
-                      <p className="font-semibold text-sm text-indigo-700">{task.subTitle}</p>
+                      <p className="text-xs text-slate-500 mb-0.5 print:text-slate-600">{task.mainTitle}</p>
+                      <p className="font-semibold text-sm text-indigo-700 print:text-slate-900">{task.subTitle}</p>
                     </td>
                     <td className="p-4 text-center align-middle">
-                      <span className="text-slate-600 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                      <span className="text-slate-600 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 print:border-none print:bg-transparent print:p-0">
                         {formatDate(task.createdAt)}
                       </span>
                     </td>
                     <td className="p-4 text-center align-middle">
-                      <span className="text-indigo-700 text-sm font-bold bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
+                      <span className="text-indigo-700 text-sm font-bold bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 print:border-none print:bg-transparent print:p-0 print:text-slate-900">
                         {formatDate(task.deadline)}
                       </span>
                     </td>
