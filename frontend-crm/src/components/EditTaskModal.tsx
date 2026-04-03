@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, PencilLine, Plus, Trash2 } from 'lucide-react';
+import { X, PencilLine, Plus, Trash2, MessageSquarePlus } from 'lucide-react';
 import api from '../api';
 
 interface Props { isOpen: boolean; onClose: () => void; onSuccess: () => void; task: any; }
@@ -11,10 +11,19 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   const [generalTitle, setGeneralTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [parentDueDate, setParentDueDate] = useState(''); // NUEVO
+  const [parentDueDate, setParentDueDate] = useState('');
   const [clientId, setClientId] = useState('');
 
-  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', estimatedHours: '' });
+  const createEmptyRow = () => ({ 
+    id: Date.now(), 
+    title: '', 
+    assignedTo: '', 
+    createdAt: '', 
+    assistantDeadline: '', 
+    estimatedHours: '',
+    comment: '',
+    showCommentField: false 
+  });
   const [taskRows, setTaskRows] = useState<any[]>([]);
 
   useEffect(() => {
@@ -23,17 +32,19 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
       setDescription(task.description || '');
       setClientId(task.client?.id || '');
       
-      // MAGIA: Rescate de Fecha de Vencimiento
       let extractedDueDate = task.dueDate ? task.dueDate.split('T')[0] : '';
       if (!extractedDueDate && task.subTasks && task.subTasks.length > 0) {
-        // Si el padre no tiene fecha, buscamos si algún renglón viejo la tenía guardada y la subimos
         const subTaskWithDate = task.subTasks.find((st: any) => st.dueDate);
         if (subTaskWithDate) extractedDueDate = subTaskWithDate.dueDate;
       }
       setParentDueDate(extractedDueDate);
 
       if (task.subTasks && task.subTasks.length > 0) {
-        setTaskRows(task.subTasks);
+        // Al cargar, si tiene comentario, marcamos que se debe mostrar el campo
+        setTaskRows(task.subTasks.map((st: any) => ({
+          ...st,
+          showCommentField: !!st.comment
+        })));
       } else {
         setTaskRows([{ ...createEmptyRow(), title: task.title }]); 
       }
@@ -50,7 +61,8 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
   const addRow = () => setTaskRows([...taskRows, createEmptyRow()]);
   const removeRow = (id: number) => { if(taskRows.length > 1) setTaskRows(taskRows.filter(row => row.id !== id)); };
-  const updateRow = (id: number, field: string, value: string) => {
+  
+  const updateRow = (id: number, field: string, value: any) => {
     setTaskRows(taskRows.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
 
@@ -58,12 +70,13 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
     e.preventDefault();
     setLoading(true);
     try {
+      const cleanSubTasks = taskRows.map(({ showCommentField, ...rest }) => rest);
       await api.patch(`/task/${task.id}`, {
         title: generalTitle || 'Trámite sin título',
         description: description || null,
-        dueDate: parentDueDate || null, // Guardamos la fecha arriba
+        dueDate: parentDueDate || null,
         clientId: clientId || null,
-        subTasks: taskRows, // Las sub-tareas ya no envían dueDate nuevo
+        subTasks: cleanSubTasks,
       });
       onSuccess(); onClose();
     } catch (error) {
@@ -106,7 +119,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
               </div>
               <div>
                 <label className="block text-sm font-bold text-red-500 mb-1">Fecha de Vencimiento</label>
-                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200 text-sm text-slate-700 outline-none transition-all h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
+                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 text-sm h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
               </div>
             </div>
           </div>
@@ -119,38 +132,57 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
 
             <div className="space-y-4">
               {taskRows.map((row, index) => (
-                <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-4 sm:p-2 rounded-xl border border-slate-200">
-                  <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
-                  
-                  <div className="w-full sm:flex-1">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
-                    <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
+                <div key={row.id} className="bg-white p-4 sm:p-2 rounded-xl border border-slate-200">
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                    <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
+                    <div className="w-full sm:flex-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
+                      <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
+                    </div>
+                    <div className="w-full sm:w-20">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
+                      <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
+                    </div>
+                    <div className="w-full sm:w-32">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
+                      <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
+                    </div>
+                    <div className="w-full sm:w-32">
+                      <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline</label>
+                      <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
+                    </div>
+                    <div className="w-full sm:w-40">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
+                      <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
+                        <option value="">-- Sin Asignar --</option>
+                        {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex gap-1 mb-0.5">
+                      <button 
+                        type="button" 
+                        onClick={() => updateRow(row.id, 'showCommentField', !row.showCommentField)}
+                        className={`p-2 rounded-lg transition-colors ${row.showCommentField || row.comment ? 'text-indigo-600 bg-indigo-50' : 'text-slate-300 hover:text-indigo-500'}`}
+                        title="Agregar aclaración"
+                      >
+                        <MessageSquarePlus className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1} className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  
-                  <div className="w-full sm:w-24">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
-                    <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
-                  </div>
-
-                  <div className="w-full sm:w-36">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
-                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
-                  </div>
-
-                  <div className="w-full sm:w-36">
-                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asistente</label>
-                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
-                  </div>
-
-                  <div className="w-full sm:w-48">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
-                    <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
-                      <option value="">-- Sin Asignar --</option>
-                      {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
-
-                  <button type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1} className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 mb-0.5"><Trash2 className="w-4 h-4" /></button>
+                  {(row.showCommentField || row.comment) && (
+                    <div className="mt-3 ml-0 sm:ml-9 animate-fade-in">
+                      <input 
+                        type="text"
+                        placeholder="Escribe aquí una aclaración o comentario para este renglón..."
+                        className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg p-2 text-xs text-indigo-900 placeholder:text-indigo-300 outline-none focus:border-indigo-300"
+                        value={row.comment}
+                        onChange={(e) => updateRow(row.id, 'comment', e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

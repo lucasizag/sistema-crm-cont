@@ -1,17 +1,26 @@
 import { useEffect, useState } from 'react';
-import { X, Plus, Trash2, ListChecks } from 'lucide-react';
+import { X, Plus, Trash2, ListChecks, MessageSquarePlus } from 'lucide-react';
 import api from '../api';
 
 interface Props { isOpen: boolean; onClose: () => void; onSuccess: () => void; clientId?: string; taskToEdit?: any; }
 
 export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: propClientId }: Props) {
   const [generalTitle, setGeneralTitle] = useState('');
-  const [description, setDescription] = useState(''); // Visualmente ahora se llama "Tarea"
-  const [parentDueDate, setParentDueDate] = useState(''); // NUEVO: Fecha de vencimiento general
+  const [description, setDescription] = useState('');
+  const [parentDueDate, setParentDueDate] = useState('');
   const [clientId, setClientId] = useState(propClientId || '');
   
-  // Ya no tiene dueDate en el renglón
-  const createEmptyRow = () => ({ id: Date.now(), title: '', assignedTo: '', createdAt: '', assistantDeadline: '', estimatedHours: '' });
+  // Agregamos 'comment' y 'showCommentField' (este último solo para la UI)
+  const createEmptyRow = () => ({ 
+    id: Date.now(), 
+    title: '', 
+    assignedTo: '', 
+    createdAt: '', 
+    assistantDeadline: '', 
+    estimatedHours: '',
+    comment: '',
+    showCommentField: false 
+  });
   const [taskRows, setTaskRows] = useState([createEmptyRow()]);
 
   const [clients, setClients] = useState<any[]>([]);
@@ -34,7 +43,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
   const addRow = () => setTaskRows([...taskRows, createEmptyRow()]);
   const removeRow = (id: number) => { if (taskRows.length > 1) setTaskRows(taskRows.filter(row => row.id !== id)); };
-  const updateRow = (id: number, field: string, value: string) => {
+  
+  const updateRow = (id: number, field: string, value: any) => {
     setTaskRows(taskRows.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
 
@@ -42,23 +52,22 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
     e.preventDefault();
     setLoading(true);
     try {
+      // Limpiamos el campo auxiliar 'showCommentField' antes de mandar al backend
+      const cleanSubTasks = taskRows.map(({ showCommentField, ...rest }) => rest);
+
       await api.post('/task', {
         title: generalTitle || 'Trámite sin título',
         description: description || null,
-        dueDate: parentDueDate || null, // Mandamos la fecha general al backend
+        dueDate: parentDueDate || null,
         clientId: propClientId || clientId || null,
         status: 'PENDIENTE',
-        subTasks: taskRows,
+        subTasks: cleanSubTasks,
       });
       onSuccess(); onClose();
     } catch (error) {
       alert('Hubo un error al guardar las tareas.');
     } finally { setLoading(false); }
   };
-
-  const activeClientId = propClientId || clientId;
-  const currentClient = clients.find(c => c.id === activeClientId);
-  const availablePredeterminedTasks = currentClient?.predeterminedTasks || [];
 
   if (!isOpen) return null;
 
@@ -74,25 +83,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
-            
-            {availablePredeterminedTasks.length > 0 && (
-              <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 mb-4 animate-fade-in shadow-sm">
-                <label className="block text-sm font-bold text-indigo-800 mb-2">✨ Autocompletar con Obligación Recurrente</label>
-                <select 
-                  className="w-full rounded-lg border border-indigo-200 p-2.5 text-sm focus:border-indigo-500 outline-none bg-white text-indigo-900 font-medium cursor-pointer"
-                  onChange={(e) => {
-                    const pt = availablePredeterminedTasks[e.target.value as any];
-                    if (pt) { setGeneralTitle(pt.task || ''); if (pt.observations) setDescription(pt.observations); e.target.value = ""; }
-                  }}
-                >
-                  <option value="">-- Tocar para elegir y autocompletar título --</option>
-                  {availablePredeterminedTasks.map((pt: any, idx: number) => (
-                    <option key={idx} value={idx}>{pt.task} {pt.month && pt.month !== 'Todos los meses' ? `(Mes: ${pt.month})` : ''}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Título del Trámite</label>
@@ -114,10 +104,9 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
               </div>
               <div>
                 <label className="block text-sm font-bold text-red-500 mb-1">Fecha de Vencimiento</label>
-                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200 text-sm text-slate-700 outline-none transition-all h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
+                <input type="date" className="block w-full rounded-xl border-red-200 border p-2.5 bg-red-50 focus:border-red-500 text-sm h-[62px]" value={parentDueDate} onChange={(e) => setParentDueDate(e.target.value)} />
               </div>
             </div>
-
           </div>
 
           <div>
@@ -128,38 +117,65 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
             <div className="space-y-4">
               {taskRows.map((row, index) => (
-                <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-white p-4 sm:p-2 rounded-xl border border-slate-200">
-                  <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
-                  
-                  <div className="w-full sm:flex-1">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
-                    <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
-                  </div>
-                  
-                  <div className="w-full sm:w-24">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
-                    <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
+                <div key={row.id} className="bg-white p-4 sm:p-2 rounded-xl border border-slate-200">
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                    <span className="w-6 text-center text-slate-400 font-medium text-sm hidden sm:block mb-2.5">{index + 1}.</span>
+                    
+                    <div className="w-full sm:flex-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Sub-tarea</label>
+                      <input type="text" required className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.title} onChange={(e) => updateRow(row.id, 'title', e.target.value)} />
+                    </div>
+                    
+                    <div className="w-full sm:w-20">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Hrs. Est.</label>
+                      <input type="number" step="0.5" className="w-full rounded-lg border-slate-200 border p-2 text-sm focus:border-indigo-500 outline-none" value={row.estimatedHours || ''} onChange={(e) => updateRow(row.id, 'estimatedHours', e.target.value)} />
+                    </div>
+
+                    <div className="w-full sm:w-32">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
+                      <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
+                    </div>
+
+                    <div className="w-full sm:w-32">
+                      <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline</label>
+                      <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
+                    </div>
+
+                    <div className="w-full sm:w-40">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
+                      <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
+                        <option value="">-- Sin Asignar --</option>
+                        {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex gap-1 mb-0.5">
+                      <button 
+                        type="button" 
+                        onClick={() => updateRow(row.id, 'showCommentField', !row.showCommentField)}
+                        className={`p-2 rounded-lg transition-colors ${row.showCommentField || row.comment ? 'text-indigo-600 bg-indigo-50' : 'text-slate-300 hover:text-indigo-500'}`}
+                        title="Agregar aclaración"
+                      >
+                        <MessageSquarePlus className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1} className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="w-full sm:w-36">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Asignación</label>
-                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-slate-50" value={row.createdAt} onChange={(e) => updateRow(row.id, 'createdAt', e.target.value)} />
-                  </div>
-
-                  <div className="w-full sm:w-36">
-                    <label className="block text-[10px] font-bold text-indigo-500 uppercase mb-1 ml-1">Deadline Asistente</label>
-                    <input type="date" className="w-full rounded-lg border-slate-200 border p-2 text-sm text-slate-600 bg-indigo-50/30" value={row.assistantDeadline} onChange={(e) => updateRow(row.id, 'assistantDeadline', e.target.value)} />
-                  </div>
-
-                  <div className="w-full sm:w-48">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Responsable</label>
-                    <select className="w-full rounded-lg border-slate-200 border p-2 text-sm bg-white" value={row.assignedTo} onChange={(e) => updateRow(row.id, 'assignedTo', e.target.value)}>
-                      <option value="">-- Sin Asignar --</option>
-                      {assistants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
-
-                  <button type="button" onClick={() => removeRow(row.id)} disabled={taskRows.length === 1} className="p-2 text-slate-300 hover:text-red-500 rounded-lg disabled:opacity-30 mb-0.5"><Trash2 className="w-4 h-4" /></button>
+                  {/* CAMPO DE ACLARACIÓN DESPLEGABLE */}
+                  {(row.showCommentField || row.comment) && (
+                    <div className="mt-3 ml-0 sm:ml-9 animate-fade-in">
+                      <input 
+                        type="text"
+                        placeholder="Escribe aquí una aclaración o comentario para este renglón..."
+                        className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg p-2 text-xs text-indigo-900 placeholder:text-indigo-300 outline-none focus:border-indigo-300"
+                        value={row.comment}
+                        onChange={(e) => updateRow(row.id, 'comment', e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -167,7 +183,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, clientId: 
 
           <div className="pt-4 flex gap-3 border-t border-slate-100">
             <button type="button" onClick={onClose} className="w-1/4 bg-white border border-slate-200 py-3 rounded-xl hover:bg-slate-50 text-sm">Cancelar</button>
-            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-sm">{loading ? 'Guardando...' : `Guardar Trámite (${taskRows.length} sub-tareas)`}</button>
+            <button type="submit" disabled={loading} className="w-3/4 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 text-sm font-bold shadow-sm">{loading ? 'Guardando...' : `Guardar Trámite`}</button>
           </div>
         </form>
       </div>
