@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Briefcase, Filter, ArrowUpDown, Printer } from 'lucide-react';
+import { X, Briefcase, Filter, ArrowUpDown, Printer, FileText } from 'lucide-react';
 import api from '../api';
 
 interface Props {
@@ -44,6 +44,7 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
               clientId: parentTask.client?.id || 'general',
               mainTitle: parentTask.title,
               subTitle: subTask.title,
+              comment: subTask.comment, // <-- EXTRAEMOS EL COMENTARIO AQUÍ
               createdAt: subTask.createdAt || '1970-01-01', 
               deadline: subTask.assistantDeadline || subTask.dueDate || '2099-12-31' 
             });
@@ -87,12 +88,10 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
   };
 
   return (
-    // Las clases print: hacen que al imprimir, el modal ocupe toda la pantalla blanca
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in print:absolute print:inset-0 print:bg-white print:p-0 print:block">
       
       <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-5xl shadow-2xl relative max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:w-full print:max-w-none print:h-auto print:overflow-visible print:p-8">
         
-        {/* BOTONES SUPERIORES (Se ocultan al imprimir con print:hidden) */}
         <div className="absolute top-4 right-4 flex gap-2 z-10 print:hidden">
           <button 
             onClick={() => window.print()} 
@@ -118,7 +117,6 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
           </div>
         </div>
 
-        {/* BARRA DE FILTROS (Se oculta al imprimir con print:hidden) */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 flex flex-wrap gap-4 shrink-0 print:hidden">
           <div className="flex-1 min-w-[200px]">
             <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center gap-1">
@@ -153,7 +151,6 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
           </div>
         </div>
 
-        {/* TABLA DE RESULTADOS (print:overflow-visible para que muestre todas las hojas si es muy larga) */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-y-auto flex-1 min-h-[300px] print:overflow-visible print:border-none print:shadow-none">
           {isLoading ? (
             <div className="flex justify-center py-20 print:hidden"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>
@@ -167,7 +164,7 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
               <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200 sticky top-0 print:static print:bg-transparent print:border-b-2 print:border-slate-800 print:text-slate-800">
                 <tr>
                   <th className="p-4">Cliente</th>
-                  <th className="p-4">Trámite / Tarea</th>
+                  <th className="p-4 w-1/2">Trámite / Tarea</th>
                   <th className="p-4 text-center">Fecha Asignada</th>
                   <th className="p-4 text-center text-indigo-600 print:text-slate-800">Fecha Cierre</th>
                 </tr>
@@ -181,6 +178,15 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
                     <td className="p-4 align-top">
                       <p className="text-xs text-slate-500 mb-0.5 print:text-slate-600">{task.mainTitle}</p>
                       <p className="font-semibold text-sm text-indigo-700 print:text-slate-900">{task.subTitle}</p>
+                      
+                      {/* ACÁ SE RENDERIZA EL COMENTARIO SI EXISTE */}
+                      {task.comment && (
+                        <div className="mt-1.5 flex items-start gap-1 text-[11px] text-slate-500 bg-slate-50 p-1.5 rounded-md border border-slate-100 print:bg-transparent print:border-none print:p-0 print:text-slate-600">
+                          <FileText className="w-3 h-3 mt-0.5 shrink-0" />
+                          <span className="italic">{task.comment}</span>
+                        </div>
+                      )}
+
                     </td>
                     <td className="p-4 text-center align-middle">
                       <span className="text-slate-600 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 print:border-none print:bg-transparent print:p-0">
