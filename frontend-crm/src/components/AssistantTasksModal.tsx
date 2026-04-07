@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Briefcase, Filter, ArrowUpDown, Printer, FileText } from 'lucide-react';
+import { X, Briefcase, Filter, ArrowUpDown, Printer } from 'lucide-react';
 import api from '../api';
 
 interface Props {
@@ -42,9 +42,12 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
               id: subTask.id || Math.random(),
               clientName: parentTask.client?.name || 'General',
               clientId: parentTask.client?.id || 'general',
+              
+              // ACÁ EXTRAEMOS EN ORDEN LA INFORMACIÓN
               mainTitle: parentTask.title,
-              subTitle: subTask.title,
-              comment: subTask.comment, // <-- EXTRAEMOS EL COMENTARIO AQUÍ
+              mainDescription: parentTask.description, // La Tarea (Detalles / Notas)
+              subTitle: subTask.title, // La Sub-tarea
+              
               createdAt: subTask.createdAt || '1970-01-01', 
               deadline: subTask.assistantDeadline || subTask.dueDate || '2099-12-31' 
             });
@@ -176,17 +179,20 @@ export default function AssistantTasksModal({ isOpen, onClose, assistant }: Prop
                       <span className="font-bold text-sm text-slate-800">{task.clientName}</span>
                     </td>
                     <td className="p-4 align-top">
-                      <p className="text-xs text-slate-500 mb-0.5 print:text-slate-600">{task.mainTitle}</p>
-                      <p className="font-semibold text-sm text-indigo-700 print:text-slate-900">{task.subTitle}</p>
+                      {/* 1. TÍTULO DEL TRÁMITE */}
+                      <p className="font-bold text-sm text-slate-800 print:text-slate-900">{task.mainTitle}</p>
                       
-                      {/* ACÁ SE RENDERIZA EL COMENTARIO SI EXISTE */}
-                      {task.comment && (
-                        <div className="mt-1.5 flex items-start gap-1 text-[11px] text-slate-500 bg-slate-50 p-1.5 rounded-md border border-slate-100 print:bg-transparent print:border-none print:p-0 print:text-slate-600">
-                          <FileText className="w-3 h-3 mt-0.5 shrink-0" />
-                          <span className="italic">{task.comment}</span>
-                        </div>
+                      {/* 2. TAREA (DETALLES / NOTAS) */}
+                      {task.mainDescription && (
+                        <p className="text-xs text-slate-500 mt-1 mb-1.5 print:text-slate-600 whitespace-pre-wrap">
+                          {task.mainDescription}
+                        </p>
                       )}
-
+                      
+                      {/* 3. SUB-TAREA */}
+                      <p className="font-semibold text-sm text-indigo-700 mt-1 print:text-slate-900">
+                        ↳ {task.subTitle}
+                      </p>
                     </td>
                     <td className="p-4 text-center align-middle">
                       <span className="text-slate-600 text-sm font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 print:border-none print:bg-transparent print:p-0">
